@@ -1,0 +1,694 @@
+<title>La Reta · Pádel</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: app de una columna para celular; banda azul de cancha arriba, barra de pestañas abajo, tarjetas tipo marcador */
+:root{
+  --bg:#050607; --surface:#101315; --ink:#f2f5ec; --muted:#8c958b; --line:#242a2c;
+  --court:#d4ff1f; --court-2:#bfea00; --on-court:#0a0d00; --ball:#d4ff1f; --ball-ink:#0a0d00; --head:#000000;
+  --good:#3fe486; --bad:#ff5b4a; --soft:#1a1f21; --glow:0 0 12px rgba(212,255,31,.55);
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--head)}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--head);color:var(--ink);border-bottom:2px solid var(--ball);box-shadow:0 2px 18px rgba(212,255,31,.25)}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px}
+.brand{font-family:var(--f-display);font-weight:800;font-size:30px;letter-spacing:.03em;text-transform:uppercase;line-height:1;display:flex;align-items:center;gap:10px;color:var(--ball);text-shadow:var(--glow)}
+
+.top .sub{font-size:13px;opacity:.85}
+main{padding-block:18px 160px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;text-wrap:balance;margin:0;line-height:1.1}
+h1{color:var(--ink);font-size:30px;text-transform:uppercase;letter-spacing:.01em}
+h2{font-size:21px;text-transform:uppercase;letter-spacing:.03em}
+h3{font-size:18px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.section-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:6px}
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 14px;font-weight:600;cursor:pointer;min-height:42px}
+.btn:hover{border-color:var(--court)}
+.btn.primary{background:var(--court);border-color:var(--court);color:var(--on-court);box-shadow:var(--glow)}
+.btn.primary:hover{background:var(--court-2)}
+.btn.ball{background:var(--ball);border-color:var(--ball);color:var(--ball-ink);box-shadow:var(--glow)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.ghost{border-color:transparent;background:transparent;padding:8px 10px}
+.btn.sm{min-height:34px;padding:6px 10px;font-size:14px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid #ffffff;outline-offset:2px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 12px;min-height:44px;width:100%}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:460px){.grid3{grid-template-columns:1fr 1fr}}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
+.seg label{flex:1;text-align:center;padding:10px 6px;cursor:pointer;font-weight:600;font-size:14px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--court);color:var(--on-court)}
+.seg label:has(input:focus-visible){outline:3px solid var(--ball);outline-offset:-3px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;background:var(--soft);font-size:13px;font-weight:600;white-space:nowrap}
+.chip.ball{background:var(--ball);color:var(--ball-ink)}
+.chip.court{background:var(--court);color:var(--on-court)}
+.chip.done{background:transparent;border:1px solid var(--line);color:var(--muted)}
+.card{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer}
+.card:hover{border-color:var(--ball);box-shadow:0 0 0 1px var(--ball),var(--glow)}
+.card .when{font-family:var(--f-display);font-weight:700;font-size:20px;text-transform:uppercase}
+.list{display:flex;flex-direction:column;gap:10px}
+.person{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+.person:first-child{border-top:0}
+.person .who{min-width:0}
+.alias{font-family:var(--f-display);font-weight:700;font-size:19px;text-transform:uppercase}
+.tel{user-select:all;font-variant-numeric:tabular-nums}
+.check{display:flex;align-items:center;gap:10px;padding:10px 4px;border-top:1px solid var(--line);cursor:pointer}
+.check:first-child{border-top:0}
+.check input{width:20px;height:20px;accent-color:var(--court)}
+.rules{margin:0;padding-left:18px}
+.rules li{margin:2px 0}
+/* marcador */
+.ronda-h{font-family:var(--f-display);font-weight:700;font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.match{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.match .ct{background:var(--court);color:var(--on-court);font-family:var(--f-display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:13px;padding:5px 12px;display:flex;justify-content:space-between}
+.side{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding:10px 12px}
+.side + .side{border-top:1px dashed var(--line)}
+.side .names{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.side.win .names::after{content:" ●";color:var(--good)}
+.score{width:64px;height:48px;text-align:center;font-family:var(--f-display);font-weight:800;font-size:28px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-variant-numeric:tabular-nums}
+.score:read-only{border-color:transparent;background:transparent}
+.warn{color:var(--bad);font-size:12px;padding:0 12px 8px}
+.matches{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+/* tablas */
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:right;font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal}
+th:first-child,td:first-child{text-align:center;width:36px}
+tr.first td{background:rgba(212,255,31,.14)}
+tr.first .pos{color:var(--ball);text-shadow:var(--glow)}
+.pos{font-family:var(--f-display);font-weight:800;font-size:18px}
+.elo{font-family:var(--f-display);font-weight:800;font-size:19px;color:var(--ball)}
+.rk td.nm{background:linear-gradient(90deg,rgba(255,196,40,calc(.06 + var(--g)*.62)) 0%,rgba(255,170,20,calc(var(--g)*.25)) 60%,rgba(255,196,40,0) 100%);border-left:3px solid rgba(255,200,60,calc(.15 + var(--g)*.85))}
+.rk td.nm b{color:color-mix(in srgb,#ffd45a calc(var(--g)*100%),var(--ink))}
+.rk tr.top td.nm b{text-shadow:0 0 10px rgba(255,200,60,.6)}
+.rk .pos.m1{color:#ffd23f;text-shadow:0 0 10px rgba(255,210,63,.7)}.rk .pos.m2{color:#d9dde3}.rk .pos.m3{color:#e0904f}
+.up{color:var(--good)} .down{color:var(--bad)}
+.counter{display:flex;align-items:center;gap:6px}
+.counter b{min-width:28px;text-align:center;font-family:var(--f-display);font-size:22px}
+.pairs{display:flex;flex-direction:column;gap:8px}
+.pair{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:var(--bg);border-radius:8px;padding:8px 10px}
+.pair .n{font-family:var(--f-display);font-weight:800;font-size:18px;color:var(--ball)}
+.banner{background:var(--soft);border-radius:8px;padding:10px 12px;font-size:14px}
+.empty{text-align:center;padding:28px 16px;color:var(--muted)}
+.empty strong{display:block;color:var(--ink);font-family:var(--f-display);font-size:20px;text-transform:uppercase;margin-bottom:4px}
+/* tabs */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--head);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
+nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(2,1fr)}
+.me-btn{appearance:none;border:1px solid var(--ball);background:transparent;color:var(--ball);border-radius:999px;padding:7px 14px;font-weight:600;cursor:pointer;max-width:55vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spons{border-bottom:1px solid var(--line);overflow:hidden;position:relative;height:44px}
+.spons .track{display:flex;gap:28px;align-items:center;height:44px;width:max-content;padding-inline:14px}
+@media (prefers-reduced-motion:no-preference){.spons .track.go{animation:marq var(--dur,40s) linear infinite}}
+@media (prefers-reduced-motion:reduce){.spons{overflow-x:auto}}
+@keyframes marq{to{transform:translateX(-50%)}}
+.slogo{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;font-weight:600;font-size:13px;color:var(--ink)}
+.slogo svg{flex:none;display:block}
+.slogo .t{display:flex;flex-direction:column;line-height:1.05}
+.slogo .t small{font-size:10px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.presented{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid rgba(255,200,60,.55);border-radius:10px;padding:12px 14px;background:linear-gradient(90deg,rgba(255,196,40,.16),rgba(255,196,40,0))}
+.presented .label{color:#ffd45a}
+.premio{font-size:13px;color:#ffd45a}
+.bnr{margin:0;display:flex;flex-direction:column;gap:4px}
+.bnr .tag{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);align-self:flex-end}
+.bnr img,.bgen{width:100%;max-width:100%;aspect-ratio:4/1;border-radius:10px;display:block;object-fit:cover;border:1px solid var(--line)}
+.bgen{position:relative;overflow:hidden;display:flex;align-items:center;gap:clamp(10px,3vw,22px);padding:0 clamp(14px,4vw,28px);
+  background:linear-gradient(110deg,var(--bc) 0%,var(--bc) 38%,#0b0d0e 38.2%,#0b0d0e 100%);color:#fff}
+.bgen::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(110deg,transparent 0 18px,rgba(255,255,255,.05) 18px 20px);pointer-events:none}
+.bgen svg{width:clamp(48px,14vw,84px);height:auto;flex:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));position:relative;z-index:1}
+.bgen .bt{position:relative;z-index:1;min-width:0;margin-left:auto;text-align:right}
+.bgen .bn{font-family:var(--f-display);font-weight:800;text-transform:uppercase;font-size:clamp(18px,5.4vw,32px);line-height:1;text-wrap:balance}
+.bgen .bl{font-size:clamp(11px,3vw,15px);color:var(--bc);font-weight:600;margin-top:4px}
+.bgen .bg{font-size:clamp(9px,2.4vw,12px);color:#b9c0b8;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+.hero{position:relative;border-radius:14px;padding:3px;overflow:hidden;isolation:isolate}
+.hero::before{content:"";position:absolute;inset:-50%;z-index:-2;background:conic-gradient(from 0deg,#7a5a00,#ffd45a,#fff3c2,#ffb800,#7a5a00,#ffd45a,#7a5a00)}
+@media (prefers-reduced-motion:no-preference){.hero::before{animation:spin 6s linear infinite}.hero .shine{animation:shine 4.5s ease-in-out infinite}}
+@keyframes spin{to{transform:rotate(1turn)}}
+@keyframes shine{0%,55%{transform:translateX(-120%) skewX(-18deg)}85%,100%{transform:translateX(320%) skewX(-18deg)}}
+.hero .in{position:relative;border-radius:11px;overflow:hidden;min-height:clamp(140px,32vw,260px);padding-block:14px;background:radial-gradient(120% 140% at 0% 0%,rgba(255,200,60,.35),transparent 55%),linear-gradient(120deg,#151006,#050505 60%);display:flex;align-items:center;gap:clamp(12px,4vw,30px);padding:0 clamp(14px,4.5vw,34px)}
+.hero .in.im{min-height:0;aspect-ratio:3/1;padding:0}
+.hero .in img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hero .k{overflow-wrap:anywhere}
+.hero .shine{position:absolute;top:0;bottom:0;width:30%;background:linear-gradient(90deg,transparent,rgba(255,240,190,.28),transparent);pointer-events:none;z-index:2}
+.hero .lg svg{width:clamp(64px,19vw,120px);height:auto;filter:drop-shadow(0 0 16px rgba(255,200,60,.55))}
+.hero .tx{min-width:0;position:relative;z-index:1}
+.hero .k{font-family:var(--f-display);font-weight:700;letter-spacing:.18em;text-transform:uppercase;font-size:clamp(10px,2.6vw,13px);color:#ffd45a}
+.hero .n{font-family:var(--f-display);font-weight:800;text-transform:uppercase;line-height:.95;font-size:clamp(24px,7.6vw,46px);color:#fff;text-shadow:0 2px 16px rgba(255,200,60,.35);text-wrap:balance}
+.hero .l{font-size:clamp(11px,3vw,15px);color:#f5e4b0;margin-top:6px;font-weight:600}
+.hero .p{display:inline-block;margin-top:8px;font-size:clamp(10px,2.6vw,13px);font-weight:700;color:#1a1200;background:linear-gradient(90deg,#ffd45a,#ffb800);border-radius:999px;padding:3px 10px}
+body.welcome nav.tabs,body.welcome #who{display:none}
+.wel{display:flex;flex-direction:column;gap:18px;padding-top:8px}
+.wel .big{font-family:var(--f-display);font-weight:800;text-transform:uppercase;font-size:clamp(40px,12vw,64px);line-height:.9;color:var(--ball);text-shadow:var(--glow);margin:0}
+.opt{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;text-align:left;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;cursor:pointer;color:var(--ink)}
+.opt:hover{border-color:var(--ball);box-shadow:var(--glow)}
+.opt .ic{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;background:var(--soft);color:var(--ball);font-family:var(--f-display);font-weight:800;font-size:22px}
+.opt.main{border-color:var(--ball)}.opt.main .ic{background:var(--ball);color:var(--ball-ink)}
+.opt b{font-family:var(--f-display);font-size:20px;text-transform:uppercase;letter-spacing:.02em}
+.opt .ar{color:var(--ball);font-size:22px}
+.tier.banner{border-color:#ff7ad9;color:#ff7ad9}
+.sp-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.sp-row:first-child{border-top:0}
+.tier{font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.tier.oficial{border-color:#ffd45a;color:#ffd45a}.tier.cancha{border-color:var(--ball);color:var(--ball)}
+body.busy header.top::after{content:"";position:absolute;left:0;bottom:-2px;height:2px;width:35%;background:#fff;box-shadow:0 0 10px #fff;animation:busy 1s ease-in-out infinite}
+@keyframes busy{0%{left:-35%}100%{left:100%}}
+.rk tr.yo td.nm{outline:1px solid var(--ball);outline-offset:-1px}
+.me-btn:hover{background:rgba(212,255,31,.12)}
+nav.tabs button{appearance:none;border:0;background:none;padding:10px 4px 12px;font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-top:3px solid transparent}
+nav.tabs button.on{color:var(--ball);border-top-color:var(--ball);text-shadow:var(--glow)}
+.fab{position:fixed;right:max(16px,calc(env(safe-area-inset-right,0px) + 16px));bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:6;box-shadow:var(--glow)}
+@media (prefers-reduced-motion:no-preference){.card,.btn{transition:border-color .15s,background .15s}}
+</style>
+
+<header class="top"><div class="wrap">
+  <div class="brand">La Reta</div>
+  <button class="me-btn" id="who" data-act="tab" data-v="perfil">Mi perfil</button>
+</div></header>
+<main class="wrap" id="main"><div class="empty"><strong>Cargando</strong>Conectando con las retas…</div></main>
+<nav class="tabs" aria-label="Secciones"><div class="spons" id="spons" aria-label="Patrocinadores"></div><div class="in">
+  <button data-act="tab" data-v="retas">Retas</button>
+  <button data-act="tab" data-v="ranking">Ranking</button>
+</div></nav>
+
+<script>
+const PRESET_RULES=["Doble falta: pone una ballena","Primer lugar no paga cancha","Último lugar paga las bebidas","Saque a la red: castigo"];
+const S={version:"",cuentas:null,pinNuevo:null,showPin:false,afterReg:null,welcomed:false,yo:null,canWrite:false,sponsors:{},isOwner:false,editSpon:null,players:{},clubs:{},retas:{},scores:{},multas:{},view:"retas",retaId:null,canWrite:true,uid:null,db:null,status:"loading",
+  draft:null,editPlayer:null,showInscribir:false,confirm:null,filter:"",dirty:false,chains:{}};
+
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const pname=id=>{const p=S.players[id];return p?(p.alias||p.nombre||"Sin nombre"):"—"};
+const pfull=id=>{const p=S.players[id];return p?[p.nombre,p.apellido].filter(Boolean).join(" "):""};
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const fmtDate=f=>{if(!f)return"";const d=new Date(f+"T12:00");return d.toLocaleDateString("es-MX",{weekday:"short",day:"numeric",month:"short"})};
+const fmtHora=h=>{if(!h)return"";const[H,M]=h.split(":").map(Number);const ap=H>=12?"pm":"am";return((H%12)||12)+":"+String(M).padStart(2,"0")+" "+ap};
+const scoreKey=(rid,mid)=>rid+"__"+mid;
+const clubName=r=>r.club||r.clubTexto||"Sin club";
+const SL="/";const imgURL=id=>"https:"+SL+SL+"lh3.googleusercontent.com"+SL+"d"+SL+id+"=w1200";
+
+let flashT;function flash(msg){let el=document.getElementById("flash");if(!el){el=document.createElement("div");el.id="flash";el.setAttribute("role","status");el.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(130px + env(safe-area-inset-bottom,0px));background:var(--ball);color:var(--ball-ink);padding:10px 14px;border-radius:8px;z-index:20;font-weight:600;max-width:90vw;text-align:center";document.body.appendChild(el)}el.textContent=msg;el.hidden=false;clearTimeout(flashT);flashT=setTimeout(()=>el.hidden=true,2600)}
+
+/* ---------- patrocinadores ---------- */
+const TIERS={oficial:"Oficial",cancha:"Cancha",banner:"Banner de reta",colaborador:"Colaborador"};
+const TORD={oficial:0,cancha:1,banner:2,colaborador:3};
+function initials(n){return(n||"?").split(/\s+/).filter(w=>w.length>2||/^[A-ZÁÉÍÓÚ]/.test(w)).slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?"}
+function logoSVG(sp,size=30){const c=/^#[0-9a-f]{6}$/i.test(sp.color||"")?sp.color:"#d4ff1f";const ink=/^#[0-9a-f]{6}$/i.test(sp.tinta||"")?sp.tinta:"#0a0d00";const t=esc(sp.siglas||initials(sp.nombre));
+  const shapes={circulo:`<circle cx="20" cy="20" r="18" fill="${c}"/>`,hexagono:`<path d="M20 2 36 11v18L20 38 4 29V11Z" fill="${c}"/>`,escudo:`<path d="M20 2 35 7v12c0 9-6 15-15 19C11 34 5 28 5 19V7Z" fill="${c}"/>`,
+    rombo:`<path d="M20 1 39 20 20 39 1 20Z" fill="${c}"/>`,cuadro:`<rect x="3" y="3" width="34" height="34" rx="8" fill="${c}"/>`,gota:`<path d="M20 2C28 14 34 20 34 27a14 14 0 0 1-28 0c0-7 6-13 14-25Z" fill="${c}"/>`};
+  return`<svg viewBox="0 0 40 40" width="${size}" height="${size}" aria-hidden="true">${shapes[sp.forma]||shapes.circulo}<text x="20" y="${sp.forma==="gota"?28:25}" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="800" font-size="${t.length>2?11:14}" fill="${ink}">${t}</text></svg>`}
+const slogo=(sp,size=30,sub=true)=>`<span class="slogo">${logoSVG(sp,size)}<span class="t">${esc(sp.nombre)}${sub&&sp.giro?`<small>${esc(sp.giro)}</small>`:""}</span></span>`;
+const activeSpons=()=>Object.entries(S.sponsors).filter(([,x])=>x.activo!==false).sort((a,b)=>(TORD[a[1].paquete]??4)-(TORD[b[1].paquete]??4)||(a[1].nombre||"").localeCompare(b[1].nombre||""));
+const oficial=()=>activeSpons().find(([,x])=>x.paquete==="oficial")?.[1];
+const canchaSpon=n=>activeSpons().find(([,x])=>x.paquete==="cancha"&&+x.cancha===n)?.[1];
+const bannerSpons=()=>activeSpons().filter(([,x])=>x.paquete==="banner").map(([,x])=>x);
+function hashStr(t){let h=0;for(const c of t)h=(h*31+c.charCodeAt(0))|0;return Math.abs(h)}
+function bannerHTML(sp){if(!sp)return"";const c=/^#[0-9a-f]{6}$/i.test(sp.color||"")?sp.color:"#d4ff1f";
+  const inner=sp.imagenId&&/^[A-Za-z0-9_-]+$/.test(sp.imagenId)?`<img src="${imgURL(sp.imagenId)}" alt="${esc(sp.nombre)}" referrerpolicy="no-referrer">`
+   :`<div class="bgen" style="--bc:${c}">${logoSVG(sp,84)}<div class="bt"><div class="bn">${esc(sp.nombre)}</div>${sp.lema?`<div class="bl">${esc(sp.lema)}</div>`:""}${sp.giro?`<div class="bg">${esc(sp.giro)}${sp.contacto?` · ${esc(sp.contacto)}`:""}</div>`:""}</div></div>`;
+  return`<figure class="bnr">${inner}<figcaption class="tag">Patrocinador</figcaption></figure>`}
+function heroHTML(sp){if(!sp)return"";const img=sp.imagenId&&/^[A-Za-z0-9_-]+$/.test(sp.imagenId);
+  return`<div class="hero"><div class="in${img?" im":""}">${img?`<img src="${imgURL(sp.imagenId)}" alt="${esc(sp.nombre)}" referrerpolicy="no-referrer">`:`<div class="lg">${logoSVG(sp,120)}</div><div class="tx"><div class="k">Ranking oficial presentado por</div><div class="n">${esc(sp.nombre)}</div>${sp.lema?`<div class="l">${esc(sp.lema)}</div>`:""}${sp.premio?`<span class="p">Premio al líder de cada reta: ${esc(sp.premio)}</span>`:""}</div>`}<span class="shine" aria-hidden="true"></span></div></div>`}
+function renderSpons(){const el=document.getElementById("spons");if(!el)return;const l=activeSpons();el.hidden=!l.length;if(!l.length)return;
+  const items=l.map(([,x])=>slogo(x,26)).join("");el.innerHTML=`<div class="track go" style="--dur:${Math.max(20,l.length*5)}s">${items}${items.replace(/<span class="slogo">/g,'<span class="slogo" aria-hidden="true">')}</div>`}
+
+/* ---------- estado de reta ---------- */
+function retaState(rid,r){
+  const ps=r.partidos||[];
+  if(!ps.length)return{label:"Inscripción",cls:"ball",n:0,done:0};
+  const done=ps.filter(m=>{const s=S.scores[scoreKey(rid,m.id)];return s&&s.a!=null&&s.b!=null}).length;
+  if(done===ps.length)return{label:"Terminada",cls:"done",n:ps.length,done};
+  return{label:done?`En juego ${done}/${ps.length}`:"Sorteada",cls:"court",n:ps.length,done};
+}
+const retaOrder=([,a],[,b])=>((b.fecha||"")+(b.hora||"")).localeCompare((a.fecha||"")+(a.hora||""));
+
+/* ---------- sorteos ---------- */
+function sortearRoyal(ids,canchas,rondas){
+  const courts=Math.min(canchas,Math.floor(ids.length/4));const played={},partner={},opp={};ids.forEach(i=>played[i]=0);
+  const k=(a,b)=>a<b?a+"|"+b:b+"|"+a;const out=[];
+  for(let r=1;r<=rondas;r++){
+    const pool=shuffle(ids.slice()).sort((a,b)=>played[a]-played[b]);
+    const playing=pool.slice(0,courts*4);let best=playing,bs=Infinity;
+    for(let t=0;t<400;t++){const p=shuffle(playing.slice());let sc=0;
+      for(let c=0;c<courts;c++){const[a,b,x,y]=p.slice(c*4,c*4+4);sc+=((partner[k(a,b)]||0)+(partner[k(x,y)]||0))*10;for(const i of[a,b])for(const j of[x,y])sc+=opp[k(i,j)]||0}
+      if(sc<bs){bs=sc;best=p;if(!sc)break}}
+    for(let c=0;c<courts;c++){const[a,b,x,y]=best.slice(c*4,c*4+4);
+      out.push({id:"r"+r+"c"+(c+1),ronda:r,cancha:c+1,a:[a,b],b:[x,y]});
+      [a,b,x,y].forEach(i=>played[i]++);partner[k(a,b)]=(partner[k(a,b)]||0)+1;partner[k(x,y)]=(partner[k(x,y)]||0)+1;
+      for(const i of[a,b])for(const j of[x,y])opp[k(i,j)]=(opp[k(i,j)]||0)+1}
+  }return out;
+}
+function sortearFija(pairs,canchas){
+  let P=pairs.map((_,i)=>i);if(P.length%2)P.push(-1);const m=P.length;const rounds=[];
+  for(let r=0;r<m-1;r++){const ms=[];for(let i=0;i<m/2;i++){const x=P[i],y=P[m-1-i];if(x>=0&&y>=0)ms.push([x,y])}rounds.push(shuffle(ms));P=[P[0],P[m-1],...P.slice(1,m-1)]}
+  const out=[];let ronda=0;
+  rounds.forEach(ms=>{for(let i=0;i<ms.length;i+=canchas){ronda++;ms.slice(i,i+canchas).forEach((mm,j)=>out.push({id:"r"+ronda+"c"+(j+1),ronda,cancha:j+1,a:pairs[mm[0]],b:pairs[mm[1]]}))}});
+  return out;
+}
+const pairsOf=ids=>{const o=[];for(let i=0;i+1<ids.length;i+=2)o.push([ids[i],ids[i+1]]);return o};
+
+/* ---------- estadísticas ---------- */
+function computeStats(){
+  const st={};const g=id=>st[id]??={elo:1000,pj:0,pg:0,pe:0,pp:0,pf:0,pc:0,last:[]};
+  for(const[rid,r] of Object.entries(S.retas).sort((a,b)=>-retaOrder(a,b))){
+    for(const m of(r.partidos||[]).slice().sort((x,y)=>x.ronda-y.ronda||x.cancha-y.cancha)){
+      const s=S.scores[scoreKey(rid,m.id)];if(!s||s.a==null||s.b==null)continue;
+      const A=m.a.map(g),B=m.b.map(g);const ra=A.reduce((t,p)=>t+p.elo,0)/A.length,rb=B.reduce((t,p)=>t+p.elo,0)/B.length;
+      const ea=1/(1+Math.pow(10,(rb-ra)/400));const sa=s.a>s.b?1:s.a<s.b?0:.5;const d=24*(sa-ea);
+      A.forEach(p=>{p.elo+=d;p.pj++;p.pf+=s.a;p.pc+=s.b;sa===1?p.pg++:sa===0?p.pp++:p.pe++;p.last.push(sa)});
+      B.forEach(p=>{p.elo-=d;p.pj++;p.pf+=s.b;p.pc+=s.a;sa===0?p.pg++:sa===1?p.pp++:p.pe++;p.last.push(1-sa)});
+    }
+  }return st;
+}
+function retaTable(rid,r){
+  const fija=r.tipo==="fija";const rows={};
+  const key=t=>fija?t.slice().sort().join("+"):null;
+  const ensure=(k,ids)=>rows[k]??={ids,pj:0,pg:0,pf:0,pc:0};
+  if(fija)pairsOf(r.jugadores||[]).forEach(p=>ensure(key(p),p));else(r.jugadores||[]).forEach(id=>ensure(id,[id]));
+  for(const m of r.partidos||[]){const s=S.scores[scoreKey(rid,m.id)];if(!s||s.a==null||s.b==null)continue;
+    const sides=[[m.a,s.a,s.b],[m.b,s.b,s.a]];
+    for(const[team,f,c] of sides){const ks=fija?[key(team)]:team;ks.forEach(k=>{const r0=ensure(k,fija?team:[k]);r0.pj++;r0.pf+=f;r0.pc+=c;if(f>c)r0.pg++})}}
+  return Object.values(rows).sort((a,b)=>b.pg-a.pg||(b.pf-b.pc)-(a.pf-a.pc)||b.pf-a.pf);
+}
+
+/* ---------- render ---------- */
+function render(){
+  const ae=document.activeElement;
+  if(ae&&ae.closest&&ae.closest("#main")&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName)){S.dirty=true;return}
+  S.dirty=false;
+  const main=document.getElementById("main");
+  if(S.status==="error"){main.innerHTML=`<div class="panel empty"><strong>No se pudo cargar</strong>${esc(S.err||"")}<div style="margin-top:12px"><button class="btn" onclick="location.reload()">Reintentar</button></div></div>`;return}
+  if(S.status==="loading"||!S.loadedPlayers)return;
+  if((S.view==="perfil"||S.view==="cuentas"||S.view==="patros"||S.view==="nueva")&&!S.uid)S.view="inicio";
+  if(S.view==="registro"&&S.uid)S.view="retas";
+  if(S.view==="retas"&&!S.uid&&!S.welcomed)S.view="inicio";
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===(S.view==="reta"||S.view==="nueva"?"retas":S.view)));
+  const me=S.uid&&S.players[S.uid];const wb=document.getElementById("who");if(wb){wb.textContent=me?(me.alias||me.nombre):"Entrar";wb.dataset.v=me?"perfil":"inicio"}
+  document.body.classList.toggle("welcome",S.view==="inicio"||S.view==="registro");
+  const v={inicio:vWelcome,registro:vRegistro,club:vClub,retas:vRetas,nueva:vNueva,reta:vReta,perfil:vPerfil,ranking:vRanking,patros:vPatros,cuentas:vCuentas}[S.view]||vRetas;
+  const y=window.scrollY;main.innerHTML=v();
+  if(S.keepScroll)window.scrollTo(0,y);S.keepScroll=false;
+}
+function go(view,extra={}){Object.assign(S,{view,confirm:null,showInscribir:false},extra);S.keepScroll=false;render();window.scrollTo(0,0)}
+
+function retaCard([id,r]){
+  const st=retaState(id,r);const n=(r.jugadores||[]).length;
+  return`<button class="card" data-act="open" data-id="${esc(id)}">
+    <div class="row between"><span class="when">${esc(fmtDate(r.fecha))} · ${esc(fmtHora(r.hora))}</span><span class="chip ${st.cls}">${esc(st.label)}</span></div>
+    <div class="row between" style="margin-top:4px"><span style="font-weight:600">${esc(clubName(r))}</span>
+    <span class="muted small">${r.tipo==="fija"?"Pareja fija":"Royal"} · ${n}/${r.maxJugadores||"∞"} jugadores · ${r.canchas} cancha${r.canchas>1?"s":""}</span></div></button>`;
+}
+function vRetas(){
+  const all=Object.entries(S.retas).sort(retaOrder);
+  const act=all.filter(([id,r])=>retaState(id,r).label!=="Terminada").reverse();
+  const fin=all.filter(([id,r])=>retaState(id,r).label==="Terminada");
+  return`<div class="stack">
+    <div class="section-head"><h1>Retas</h1>${S.uid?`<button class="btn primary" data-act="nueva">Crear reta</button>`:`<button class="btn" data-act="tab" data-v="inicio">Entrar</button>`}</div>
+    ${!all.length?`<div class="panel empty"><strong>Todavía no hay retas</strong>Crea la primera reta: club, hora, canchas, reglas y sorteo de partidos.</div>`:""}
+    ${act.length?`<h2>Próximas y en juego</h2><div class="list">${act.map(retaCard).join("")}</div>`:""}
+    ${fin.length?`<h2 style="margin-top:8px">Terminadas</h2><div class="list">${fin.map(retaCard).join("")}</div>`:""}
+  </div>`;
+}
+
+function knownClubs(){const s=new Set(Object.values(S.clubs).map(c=>c.nombre));Object.values(S.retas).forEach(r=>{if(r.club)s.add(r.club)});return[...s].filter(Boolean).sort()}
+function newDraft(){const last=Object.entries(S.retas).sort(retaOrder)[0];return{clubTexto:last?clubName(last[1]):"",fecha:today(),hora:"19:00",canchas:2,maxJugadores:8,tipo:"royal",puntos:24,modo:"total",reglas:PRESET_RULES.slice(0,2),castigo:"Ballenas",extra:""}}
+function vNueva(){
+  const d=S.draft||(S.draft=newDraft());
+  const custom=d.reglas.filter(r=>!PRESET_RULES.includes(r));
+  return`<form class="stack" data-form="reta">
+    <div class="row"><button type="button" class="btn ghost" data-act="tab" data-v="retas">← Retas</button></div>
+    <h1>Nueva reta</h1>
+    <div class="panel stack">
+      <div class="field"><label class="label" for="r-clubt">Club</label><input id="r-clubt" name="clubTexto" list="clubs-list" value="${esc(d.clubTexto)}" placeholder="Escribe o elige el club" autocomplete="off">
+        <datalist id="clubs-list">${knownClubs().map(c=>`<option value="${esc(c)}">`).join("")}</datalist></div>
+      <div class="grid2"><div class="field"><label class="label" for="r-fecha">Fecha</label><input id="r-fecha" type="date" name="fecha" value="${esc(d.fecha)}" required></div>
+      <div class="field"><label class="label" for="r-hora">Hora</label><input id="r-hora" type="time" name="hora" value="${esc(d.hora)}" required></div></div>
+      <div class="grid2"><div class="field"><label class="label" for="r-canchas">Canchas</label><input id="r-canchas" type="number" min="1" max="12" name="canchas" value="${d.canchas}"></div>
+      <div class="field"><label class="label" for="r-max">Máx. jugadores</label><input id="r-max" type="number" min="4" max="64" name="maxJugadores" value="${d.maxJugadores}"></div></div>
+    </div>
+    <div class="panel stack">
+      <span class="label">Tipo de juego</span>
+      <div class="seg"><label><input type="radio" name="tipo" value="royal" ${d.tipo==="royal"?"checked":""}>Royal</label><label><input type="radio" name="tipo" value="fija" ${d.tipo==="fija"?"checked":""}>Pareja fija</label></div>
+      <p class="muted small" style="margin:0">${d.tipo==="royal"?"Royal: las parejas cambian cada ronda y cada quien suma sus propios puntos.":"Pareja fija: las parejas se mantienen y juegan todas contra todas."}</p>
+      <div class="grid2"><div class="field"><label class="label" for="r-puntos">Puntos</label><input id="r-puntos" type="number" min="1" max="99" name="puntos" value="${d.puntos}"></div>
+      <div class="field"><span class="label">Cómo se cuentan</span><div class="seg"><label><input type="radio" name="modo" value="total" ${d.modo==="total"?"checked":""}>Totales</label><label><input type="radio" name="modo" value="meta" ${d.modo==="meta"?"checked":""}>A llegar</label></div></div></div>
+      <p class="muted small" style="margin:0">${d.modo==="total"?`Se juegan ${d.puntos} puntos en total y el marcador debe sumar ${d.puntos} (ej. ${Math.ceil(d.puntos/2)+1}–${Math.floor(d.puntos/2)-1}).`:`Gana la pareja que llegue primero a ${d.puntos}.`}</p>
+    </div>
+    <div class="panel stack">
+      <span class="label">Reglas de la reta</span>
+      <div>${PRESET_RULES.map((r,i)=>`<label class="check"><input type="checkbox" name="preset" value="${i}" ${d.reglas.includes(r)?"checked":""}>${esc(r)}</label>`).join("")}
+      ${custom.map((r,i)=>`<div class="check"><span style="flex:1">${esc(r)}</span><button type="button" class="btn ghost sm" data-act="delrule" data-i="${esc(r)}" aria-label="Quitar regla">Quitar</button></div>`).join("")}</div>
+      <div class="row"><div class="field" style="flex:1"><label class="label" for="r-extra">Otra regla</label><input id="r-extra" name="extra" value="${esc(d.extra)}" placeholder="Ej. Bola por la reja: invita una ronda"></div>
+      <button type="button" class="btn" data-act="addrule" style="align-self:flex-end">Agregar</button></div>
+      <div class="field"><label class="label" for="r-castigo">Nombre del contador de castigos</label><input id="r-castigo" name="castigo" value="${esc(d.castigo)}"></div>
+    </div>
+    <button class="btn primary" type="submit">Crear reta</button>
+  </form>`;
+}
+
+function vReta(){
+  const id=S.retaId,r=S.retas[id];if(!r)return`<div class="panel empty"><strong>Reta no encontrada</strong><button class="btn" data-act="tab" data-v="retas">Ver retas</button></div>`;
+  const ins=r.jugadores||[];const st=retaState(id,r);const fija=r.tipo==="fija";const ps=r.partidos||[];
+  const anyScore=ps.some(m=>{const s=S.scores[scoreKey(id,m.id)];return s&&(s.a!=null||s.b!=null)});
+  const W=puedeOrg(r),C=esCreador(r),J=!!S.uid;
+  const bs=bannerSpons();
+  let h=`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="retas">← Retas</button></div>
+  ${bs.length?bannerHTML(bs[hashStr(id)%bs.length]):""}
+  <div class="panel stack"><div class="row between"><span class="chip ${st.cls}">${esc(st.label)}</span><span class="muted small">${fija?"Pareja fija":"Royal"}</span></div>
+    <h1>${esc(clubName(r))}</h1>
+    <div class="row" style="font-family:var(--f-display);font-size:20px;font-weight:700;text-transform:uppercase">${esc(fmtDate(r.fecha))} · ${esc(fmtHora(r.hora))}</div>
+    <div class="row"><span class="chip">${r.canchas} cancha${r.canchas>1?"s":""}</span><span class="chip">${ins.length}/${r.maxJugadores} jugadores</span><span class="chip">${r.modo==="total"?`${r.puntos} puntos totales`:`A ${r.puntos} puntos`}</span></div>
+    ${(r.reglas||[]).length?`<div><span class="label">Reglas</span><ul class="rules">${r.reglas.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
+  </div>`;
+  const meIn=S.uid&&ins.includes(S.uid);const hasMe=S.uid&&S.players[S.uid];
+  h+=`<div class="section-head"><h2>Jugadores</h2><span class="row" style="gap:6px">
+    ${J&&!ps.length&&hasMe?(meIn?`<button class="btn sm" data-act="leave">Salirme</button>`:`<button class="btn sm ball" data-act="join" ${ins.length>=r.maxJugadores?"disabled":""}>Me apunto</button>`):""}
+    ${C&&!ps.length?`<button class="btn sm" data-act="toggleIns">${S.showInscribir?"Listo":"Inscribir a otros"}</button>`:""}</span></div>
+  ${!J&&!ps.length?`<div class="banner"><button class="btn ghost sm" data-act="tab" data-v="inicio" style="text-decoration:underline;padding:0 2px;min-height:0">Entra o regístrate</button> para apuntarte a esta reta.</div>`:""}`;
+  if(S.showInscribir&&C&&!ps.length){
+    const all=Object.entries(S.players).sort((a,b)=>pname(a[0]).localeCompare(pname(b[0])));
+    h+=`<div class="panel">${all.length?all.map(([pid])=>`<label class="check"><input type="checkbox" data-act="ins" data-id="${esc(pid)}" ${ins.includes(pid)?"checked":""} ${!ins.includes(pid)&&ins.length>=r.maxJugadores?"disabled":""}><span><b>${esc(pname(pid))}</b> <span class="muted small">${esc(pfull(pid))}</span></span></label>`).join(""):`<p class="muted" style="margin:0">Todavía nadie se ha registrado.</p>`}</div>`;
+  }
+  if(!ins.length)h+=`<div class="panel empty"><strong>Nadie inscrito</strong>${J?"Toca Me apunto para entrar a la reta.":"Aún no hay jugadores en esta reta."}</div>`;
+  else if(fija){
+    const prs=pairsOf(ins);const solo=ins.length%2?ins[ins.length-1]:null;
+    h+=`<div class="panel stack"><div class="pairs">${prs.map((p,i)=>`<div class="pair"><span class="n">P${i+1}</span><span>${esc(pname(p[0]))} y ${esc(pname(p[1]))}</span>
+      ${W&&!ps.length?`<span class="row" style="gap:4px"><button class="btn sm" data-act="swap" data-i="${i*2+1}" aria-label="Cambiar compañero">Cambiar</button></span>`:"<span></span>"}</div>`).join("")}</div>
+      ${solo?`<p class="muted small" style="margin:0">${esc(pname(solo))} no tiene pareja todavía.</p>`:""}
+      ${W&&!ps.length&&ins.length>=4?`<button class="btn" data-act="mixPairs">Sortear parejas</button>`:""}</div>`;
+  }else{
+    h+=`<div class="panel"><div class="row">${ins.map(pid=>`<span class="chip">${esc(pname(pid))}</span>`).join("")}</div></div>`;
+  }
+  if(W&&!ps.length){
+    const ok=fija?(ins.length>=4&&ins.length%2===0):ins.length>=4;
+    const defR=Math.max(3,Math.min(ins.length-1,8));
+    h+=`<div class="panel stack"><h3>Sorteo de partidos</h3>
+      ${fija?`<p class="muted small" style="margin:0">Todas las parejas juegan contra todas, repartidas en ${r.canchas} cancha${r.canchas>1?"s":""}.</p>`:
+      `<div class="field" style="max-width:200px"><label class="label" for="rondas">Rondas</label><input id="rondas" type="number" min="1" max="30" value="${defR}"></div>
+       <p class="muted small" style="margin:0">El sorteo evita repetir compañero y reparte los descansos.</p>`}
+      <button class="btn ball" data-act="sortear" ${ok?"":"disabled"}>Sortear partidos</button>
+      ${ok?"":`<p class="muted small" style="margin:0">${fija?"Se necesitan al menos 2 parejas completas.":"Se necesitan al menos 4 jugadores."}</p>`}</div>`;
+  }
+  if(ps.length){
+    h+=`<div class="section-head"><h2>Partidos</h2>${W&&!anyScore?`<button class="btn sm" data-act="resortear">Volver a sortear</button>`:""}</div>`;
+    const rondas=[...new Set(ps.map(m=>m.ronda))].sort((a,b)=>a-b);
+    for(const rn of rondas){
+      const ms=ps.filter(m=>m.ronda===rn);const playing=new Set(ms.flatMap(m=>[...m.a,...m.b]));const rest=ins.filter(p=>!playing.has(p));
+      h+=`<div class="stack" style="gap:8px"><div class="ronda-h"><span>Ronda ${rn}</span>${rest.length?`<span class="small" style="letter-spacing:.02em;text-transform:none;font-family:var(--f-body)">Descansa: ${rest.map(p=>esc(pname(p))).join(", ")}</span>`:""}</div><div class="matches">`;
+      for(const m of ms){const s=S.scores[scoreKey(id,m.id)]||{};const has=s.a!=null&&s.b!=null;
+        let warn="";if(has){if(r.modo==="total"&&s.a+s.b!==r.puntos)warn=`El marcador debe sumar ${r.puntos}.`;if(r.modo==="meta"&&Math.max(s.a,s.b)!==r.puntos)warn=`Alguien debe llegar a ${r.puntos}.`}
+        const side=(t,val,w)=>`<div class="side ${w?"win":""}"><span class="names">${t.map(p=>esc(pname(p))).join(" / ")}</span>
+          <input class="score" type="number" inputmode="numeric" min="0" max="99" aria-label="Puntos de ${esc(t.map(pname).join(" y "))}" data-act="score" data-m="${esc(m.id)}" data-side="${t===m.a?"a":"b"}" value="${val??""}" ${W?"":"readonly"}></div>`;
+        h+=`<div class="match"><div class="ct"><span>Cancha ${m.cancha}${canchaSpon(m.cancha)?` · ${esc(canchaSpon(m.cancha).nombre)}`:""}</span><span>${has?"Final":""}</span></div>${side(m.a,s.a,has&&s.a>s.b)}${side(m.b,s.b,has&&s.b>s.a)}${warn?`<div class="warn">${esc(warn)}</div>`:""}</div>`;}
+      h+=`</div></div>`;
+    }
+    const tb=retaTable(id,r);
+    h+=`<h2>Tabla de la reta</h2>${oficial()?.premio?`<div class="premio">Premio al primer lugar: ${esc(oficial().premio)}, cortesía de ${esc(oficial().nombre)}</div>`:""}<div class="panel tbl-wrap"><table><thead><tr><th>#</th><th>${fija?"Pareja":"Jugador"}</th><th>PJ</th><th>PG</th><th>Pts</th><th>Dif</th></tr></thead><tbody>
+      ${tb.map((x,i)=>`<tr class="${i===0&&x.pj?"first":""}"><td class="pos">${i+1}</td><td>${x.ids.map(p=>esc(pname(p))).join(" / ")}</td><td>${x.pj}</td><td>${x.pg}</td><td>${x.pf}</td><td class="${x.pf-x.pc>0?"up":x.pf-x.pc<0?"down":""}">${x.pf-x.pc>0?"+":""}${x.pf-x.pc}</td></tr>`).join("")}
+    </tbody></table>${(r.reglas||[]).some(x=>/primer lugar/i.test(x))&&st.label==="Terminada"&&tb[0]?`<p class="small" style="margin:10px 0 0"><b>${tb[0].ids.map(p=>esc(pname(p))).join(" y ")}</b> no paga cancha.</p>`:""}</div>`;
+  }
+  if(ins.length){
+    h+=`<h2>${esc(r.castigo||"Castigos")}</h2><div class="panel">${ins.map(pid=>{const n=(S.multas[scoreKey(id,pid)]||{}).n||0;
+      return`<div class="person"><span class="who"><b>${esc(pname(pid))}</b></span><span class="counter">${W?`<button class="btn sm" data-act="multa" data-id="${esc(pid)}" data-d="-1" aria-label="Quitar uno" ${n?"":"disabled"}>−</button>`:""}<b>${n}</b>${W?`<button class="btn sm" data-act="multa" data-id="${esc(pid)}" data-d="1" aria-label="Sumar uno">+</button>`:""}</span></div>`}).join("")}</div>`;
+  }
+  if(C){h+=S.confirm==="reta"?`<div class="panel row between"><span>¿Borrar esta reta y sus marcadores?</span><span class="row"><button class="btn" data-act="cancel">No</button><button class="btn danger" data-act="delReta">Sí, borrar</button></span></div>`
+    :`<div><button class="btn danger sm" data-act="ask" data-what="reta">Borrar reta</button></div>`}
+  return h+`</div>`;
+}
+
+function myClub(){return S.uid?Object.values(S.clubs).find(c=>c.ownerId===S.uid):null}
+function puedeOrg(r){return !!S.uid&&(S.isOwner||r.creadorId===S.uid||(r.jugadores||[]).includes(S.uid))}
+function esCreador(r){return !!S.uid&&(S.isOwner||r.creadorId===S.uid)}
+
+function vWelcome(){
+  const nP=Object.keys(S.players).length,nR=Object.keys(S.retas).length,nC=Object.keys(S.clubs).length;const of=oficial();
+  return`<div class="wel"><div><p class="big">Bienvenido</p><p class="muted" style="margin:6px 0 0">Retas, marcadores y ranking del pádel en Tepic. ${nP} jugadores, ${nC} clubs y ${nR} retas registradas.</p></div>
+  ${of?heroHTML(of):""}
+  <form class="panel stack" data-form="login" autocomplete="on"><h3>Iniciar sesión</h3>
+    <div class="grid2"><div class="field"><label class="label" for="l-cel">Celular</label><input id="l-cel" name="celular" type="tel" inputmode="numeric" autocomplete="username" placeholder="10 dígitos" required></div>
+    <div class="field"><label class="label" for="l-pin">PIN</label><input id="l-pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="6" pattern="[0-9]{6}" placeholder="6 números" required></div></div>
+    <button class="btn primary" type="submit">Entrar</button>
+    <p class="muted small" style="margin:0">¿Olvidaste tu PIN? Pídele al administrador que te asigne uno nuevo.</p></form>
+  <button class="opt main" data-act="tab" data-v="registro"><span class="ic">J</span><span><b>Registrarme como jugador</b><div class="muted small">Con tu celular y un PIN de 6 números. Te apuntas a retas y entras al ranking.</div></span><span class="ar">›</span></button>
+  <button class="opt" data-act="regclub"><span class="ic">C</span><span><b>Registrar un club</b><div class="muted small">Crea tu cuenta y da de alta tu club para que las retas se armen ahí.</div></span><span class="ar">›</span></button>
+  <button class="opt" data-act="skip"><span class="ic">→</span><span><b>Solo ver</b><div class="muted small">Entra sin registrarte a ver retas y ranking.</div></span><span class="ar">›</span></button></div>`;
+}
+function vRegistro(){
+  return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="inicio">← Inicio</button></div><h1>Registro de jugador</h1>
+  ${S.afterReg==="club"?`<div class="banner">Primero crea tu cuenta; al terminar registras tu club.</div>`:""}
+  <form class="panel stack" data-form="registro" autocomplete="on">
+    <div class="grid2"><div class="field"><label class="label" for="r-nom">Nombre</label><input id="r-nom" name="nombre" required autocomplete="given-name"></div>
+    <div class="field"><label class="label" for="r-ape">Apellido</label><input id="r-ape" name="apellido" autocomplete="family-name"></div></div>
+    <div class="grid2"><div class="field"><label class="label" for="r-ali">Alias</label><input id="r-ali" name="alias" placeholder="Como te dicen en la cancha"></div>
+    <div class="field"><label class="label" for="r-cel">Celular</label><input id="r-cel" name="celular" type="tel" inputmode="numeric" autocomplete="username" placeholder="10 dígitos" required></div></div>
+    <div class="grid2"><div class="field"><label class="label" for="r-pin">PIN de 6 números</label><input id="r-pin" name="pin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" pattern="[0-9]{6}" required></div>
+    <div class="field"><label class="label" for="r-pin2">Repite el PIN</label><input id="r-pin2" name="pin2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" pattern="[0-9]{6}" required></div></div>
+    <p class="muted small" style="margin:0">Con tu celular y este PIN entras desde cualquier teléfono. No uses fechas de cumpleaños ni números repetidos.</p>
+    <button class="btn primary" type="submit">Crear mi cuenta</button></form></div>`}
+function vClub(){
+  if(!S.uid){S.afterReg="club";return vRegistro()}
+  const c=myClub()||{};
+  return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="perfil">← Mi perfil</button></div><h1>${c.id?"Mi club":"Registrar club"}</h1>
+  <form class="panel stack" data-form="club">
+    <div class="field"><label class="label" for="c-nom">Nombre del club</label><input id="c-nom" name="nombre" required value="${esc(c.nombre)}"></div>
+    <div class="grid2"><div class="field"><label class="label" for="c-ciu">Ciudad</label><input id="c-ciu" name="ciudad" value="${esc(c.ciudad||"Tepic")}"></div>
+    <div class="field"><label class="label" for="c-can">Número de canchas</label><input id="c-can" name="canchas" type="number" min="1" max="40" value="${esc(c.canchas??"")}"></div></div>
+    <div class="field"><label class="label" for="c-dir">Dirección</label><input id="c-dir" name="direccion" value="${esc(c.direccion)}"></div>
+    <div class="grid2"><div class="field"><label class="label" for="c-tel">Teléfono</label><input id="c-tel" name="telefono" type="tel" value="${esc(c.telefono)}"></div>
+    <div class="field"><label class="label" for="c-hor">Horario</label><input id="c-hor" name="horario" value="${esc(c.horario)}" placeholder="Ej. Lun a Dom 7:00–23:00"></div></div>
+    <button class="btn primary" type="submit">${c.id?"Guardar cambios":"Registrar club"}</button></form>
+  <h2>Clubs registrados</h2><div class="panel">${Object.values(S.clubs).sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"")).map(x=>`<div class="person"><div class="who"><div class="alias">${esc(x.nombre)}</div><div class="muted small">${[x.direccion,x.ciudad,x.canchas?x.canchas+" canchas":"",x.horario].filter(Boolean).map(esc).join(" · ")}${x.telefono?` · <span class="tel">${esc(x.telefono)}</span>`:""}</div></div></div>`).join("")||`<p class="muted" style="margin:0">Aún no hay clubs.</p>`}</div></div>`}
+function vPerfil(){
+  if(!S.uid)return vWelcome();
+  const p=S.players[S.uid]||{};const stats=computeStats();const st=stats[S.uid];
+  const rows=Object.entries(stats).filter(([id])=>S.players[id]).sort((a,b)=>b[1].elo-a[1].elo);const pos=rows.findIndex(([id])=>id===S.uid)+1;
+  const c=myClub();
+  return`<div class="stack"><div class="row between"><button class="btn ghost" data-act="tab" data-v="retas">← Retas</button><button class="btn sm" data-act="logout">Cerrar sesión</button></div>
+  <h1>Mi perfil</h1>
+  ${st?`<div class="panel row between"><div><span class="label">Rating</span><div class="elo" style="font-size:34px">${Math.round(st.elo)}</div></div>
+    <div><span class="label">Lugar</span><div class="elo" style="font-size:34px">${pos}°</div></div>
+    <div><span class="label">Récord</span><div class="elo" style="font-size:34px">${st.pg}-${st.pp}</div></div></div>`:""}
+  <form class="panel stack" data-form="perfil">
+    <div class="grid2"><div class="field"><label class="label" for="p-nom">Nombre</label><input id="p-nom" name="nombre" required value="${esc(p.nombre)}"></div>
+    <div class="field"><label class="label" for="p-ape">Apellido</label><input id="p-ape" name="apellido" value="${esc(p.apellido)}"></div></div>
+    <div class="grid2"><div class="field"><label class="label" for="p-ali">Alias</label><input id="p-ali" name="alias" value="${esc(p.alias)}" placeholder="Como te dicen en la cancha"></div>
+    <div class="field"><span class="label">Celular</span><div class="tel" style="padding:10px 0">${esc(p.celular||"")}</div></div></div>
+    <button class="btn primary" type="submit">Guardar perfil</button></form>
+  ${S.showPin?`<form class="panel stack" data-form="pin"><h3>Cambiar PIN</h3>
+    <div class="grid3"><div class="field"><label class="label" for="k-a">PIN actual</label><input id="k-a" name="actual" type="password" inputmode="numeric" maxlength="6" required></div>
+    <div class="field"><label class="label" for="k-n">PIN nuevo</label><input id="k-n" name="nuevo" type="password" inputmode="numeric" maxlength="6" required></div>
+    <div class="field"><label class="label" for="k-n2">Repite</label><input id="k-n2" name="nuevo2" type="password" inputmode="numeric" maxlength="6" required></div></div>
+    <div class="row"><button class="btn primary" type="submit">Cambiar PIN</button><button class="btn" type="button" data-act="pinToggle">Cancelar</button></div></form>`
+   :`<div><button class="btn sm" data-act="pinToggle">Cambiar mi PIN</button></div>`}
+  <div class="panel row between"><div><b>${c?esc(c.nombre):"¿Tienes un club?"}</b><div class="muted small">${c?"Tu club registrado":"Regístralo para que las retas se armen ahí"} · ${Object.keys(S.clubs).length} clubs en la app</div></div><button class="btn" data-act="tab" data-v="club">${c?"Editar club":"Registrar club"}</button></div>
+  ${S.isOwner?`<h2>Administración</h2>
+  <div class="panel row between"><div><b>Patrocinadores</b><div class="muted small">${activeSpons().length} activos · solo tú puedes administrarlos</div></div><button class="btn" data-act="tab" data-v="patros">Administrar</button></div>
+  <div class="panel row between"><div><b>Jugadores con cuenta</b><div class="muted small">Asigna PIN nuevo o bloquea cuentas</div></div><button class="btn" data-act="tab" data-v="cuentas">Ver cuentas</button></div>`:""}
+  </div>`;
+}
+function vCuentas(){
+  if(!S.isOwner)return`<div class="panel empty"><strong>Solo el administrador</strong></div>`;
+  const l=S.cuentas;
+  return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="perfil">← Mi perfil</button></div><h1>Cuentas</h1>
+  ${S.pinNuevo?`<div class="presented"><div><span class="label">PIN nuevo de ${esc(pname(S.pinNuevo.id))}</span><div class="elo tel" style="font-size:34px;letter-spacing:.2em">${esc(S.pinNuevo.pin)}</div><div class="muted small">Díselo en persona o por mensaje. Ya no se puede volver a ver.</div></div><button class="btn sm" data-act="pinOk">Listo</button></div>`:""}
+  ${!l?`<div class="panel empty"><strong>Cargando</strong></div>`:`<div class="panel">${l.map(j=>`<div class="sp-row"><div class="who"><div class="alias">${esc(j.alias||j.nombre)}</div><div class="muted small">${esc([j.nombre,j.apellido].filter(Boolean).join(" "))} · <span class="tel">${esc(j.celular)}</span>${j.rol==="ADMIN"?" · Admin":""}${j.estado==="bloqueado"?` · <span style="color:var(--bad)">Bloqueado</span>`:""}</div></div>
+    <div class="row" style="gap:6px">${j.rol!=="ADMIN"?`<button class="btn sm" data-act="resetPin" data-id="${esc(j.id)}">PIN nuevo</button><button class="btn sm ${j.estado==="bloqueado"?"":"danger"}" data-act="bloquear" data-id="${esc(j.id)}" data-e="${j.estado==="bloqueado"?"activo":"bloqueado"}">${j.estado==="bloqueado"?"Desbloquear":"Bloquear"}</button>`:""}</div></div>`).join("")||`<p class="muted" style="margin:0">Nadie se ha registrado todavía.</p>`}</div>`}</div>`;
+}
+function vPatros(){
+  if(!S.isOwner)return`<div class="panel empty"><strong>Solo el administrador</strong>Esta sección la maneja el dueño de la app.</div>`;
+  const e=S.editSpon;const sp=e&&e!=="new"?S.sponsors[e]||{}:{paquete:"colaborador",forma:"circulo",color:"#d4ff1f",tinta:"#0a0d00",activo:true};
+  const img=S.sponImg!==undefined?S.sponImg:sp.imagenId;
+  const all=Object.entries(S.sponsors).sort((a,b)=>(TORD[a[1].paquete]??4)-(TORD[b[1].paquete]??4));
+  const total=all.filter(([,x])=>x.activo!==false).reduce((t,[,x])=>t+(+x.cuota||0),0);
+  const opt=(o,v)=>Object.entries(o).map(([k,l])=>`<option value="${k}" ${v===k?"selected":""}>${l}</option>`).join("");
+  return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="perfil">← Mi perfil</button></div>
+  <div class="section-head"><h1>Patrocinadores</h1>${!e?`<button class="btn primary" data-act="editS" data-id="new">Agregar</button>`:""}</div>
+  <div class="panel row between"><div><span class="label">Ingreso mensual</span><div class="elo" style="font-size:30px">$${total.toLocaleString("es-MX")}</div></div><div class="muted small">${all.filter(([,x])=>x.activo!==false).length} activos de ${all.length}</div></div>
+  ${e?`<form class="panel stack" data-form="spon"><h3>${e==="new"?"Nuevo patrocinador":"Editar patrocinador"}</h3>
+    <div class="row">${logoSVG(sp,56)}<span class="muted small">El logo se arma con la forma, el color y las siglas.</span></div>
+    <div class="grid2"><div class="field"><label class="label" for="s-nom">Marca</label><input id="s-nom" name="nombre" required value="${esc(sp.nombre)}"></div>
+    <div class="field"><label class="label" for="s-giro">Giro</label><input id="s-giro" name="giro" value="${esc(sp.giro)}" placeholder="Ej. Tienda de pádel"></div></div>
+    <div class="grid3"><div class="field"><label class="label" for="s-paq">Paquete</label><select id="s-paq" name="paquete">${opt(TIERS,sp.paquete)}</select></div>
+    <div class="field"><label class="label" for="s-can">Cancha</label><input id="s-can" name="cancha" type="number" min="1" max="12" value="${esc(sp.cancha??"")}" placeholder="Solo paquete Cancha"></div>
+    <div class="field"><label class="label" for="s-cuota">Cuota mensual</label><input id="s-cuota" name="cuota" type="number" min="0" step="50" value="${esc(sp.cuota??"")}"></div></div>
+    <div class="grid3"><div class="field"><label class="label" for="s-forma">Forma</label><select id="s-forma" name="forma">${opt({circulo:"Círculo",hexagono:"Hexágono",escudo:"Escudo",rombo:"Rombo",cuadro:"Cuadro",gota:"Gota"},sp.forma)}</select></div>
+    <div class="field"><label class="label" for="s-color">Color</label><input id="s-color" name="color" type="color" value="${esc(sp.color||"#d4ff1f")}"></div>
+    <div class="field"><label class="label" for="s-sig">Siglas</label><input id="s-sig" name="siglas" maxlength="3" value="${esc(sp.siglas)}" placeholder="Auto"></div></div>
+    <div class="grid2"><div class="field"><label class="label" for="s-tinta">Color de letra</label><select id="s-tinta" name="tinta">${opt({"#0a0d00":"Negro","#ffffff":"Blanco"},sp.tinta)}</select></div>
+    <div class="field"><label class="label" for="s-tel">Contacto</label><input id="s-tel" name="contacto" value="${esc(sp.contacto)}"></div></div>
+    <div class="field"><label class="label" for="s-lema">Lema o promoción (banner)</label><input id="s-lema" name="lema" maxlength="70" value="${esc(sp.lema)}" placeholder="Ej. 10% de descuento mostrando tu perfil de La Reta"></div>
+    <div class="field"><label class="label" for="s-img">Imagen del banner (opcional)</label>
+      <input id="s-img" type="file" accept="image/png,image/jpeg,image/webp" data-act="sponimg">
+      <span class="muted small">Medida: Banner de reta 1200 × 300 px (4:1); Oficial del ranking 1200 × 400 px (3:1). JPG o PNG, máximo 1 MB. Sin imagen, se arma un banner con el logo y el lema.</span></div>
+    <div id="s-prev">${(sp.paquete==="oficial"?heroHTML:bannerHTML)({...sp,imagenId:img})}</div>
+    ${img?`<button class="btn sm" type="button" data-act="noimg">Quitar imagen</button>`:""}
+    <div class="field"><label class="label" for="s-premio">Premio al primer lugar (paquete Oficial)</label><input id="s-premio" name="premio" value="${esc(sp.premio)}"></div>
+    <label class="check"><input type="checkbox" name="activo" ${sp.activo!==false?"checked":""}>Activo (se muestra en la app)</label>
+    <div class="row"><button class="btn primary" type="submit">Guardar</button><button class="btn" type="button" data-act="editS" data-id="">Cancelar</button>
+    ${e!=="new"?(S.confirm==="spon"?`<button class="btn danger" type="button" data-act="delSpon">Confirmar borrar</button>`:`<button class="btn danger" type="button" data-act="ask" data-what="spon">Borrar</button>`):""}</div></form>`:""}
+  <div class="panel">${all.map(([id,x])=>`<div class="sp-row"><div class="row" style="gap:12px">${slogo(x,36)}<span class="tier ${esc(x.paquete)}">${TIERS[x.paquete]||""}${x.paquete==="cancha"&&x.cancha?" "+esc(x.cancha):""}</span>${x.activo===false?`<span class="tier">Pausado</span>`:""}</div>
+    <div class="row" style="gap:8px"><span class="muted small" style="font-variant-numeric:tabular-nums">$${(+x.cuota||0).toLocaleString("es-MX")}</span><button class="btn sm" data-act="editS" data-id="${esc(id)}">Editar</button></div></div>`).join("")||`<p class="muted" style="margin:0">Sin patrocinadores todavía.</p>`}</div></div>`;
+}
+function vRanking(){
+  const st=computeStats();const rows=Object.entries(st).filter(([id])=>S.players[id]).sort((a,b)=>b[1].elo-a[1].elo);
+  const lo=rows.length?Math.min(...rows.map(r=>r[1].elo)):0,hi=rows.length?Math.max(...rows.map(r=>r[1].elo)):0;
+  const trend=l=>l.slice(-5).map(x=>x===1?"G":x===0?"P":"E").join(" ");
+  const of=oficial();
+  return`<div class="stack"><h1>Ranking</h1>${of?heroHTML(of):""}
+  <p class="muted" style="margin:0">Todos empiezan en 1000. Cada partido compara el promedio de las dos parejas: ganarle a una pareja más fuerte da más puntos y perder con una más débil quita más. <b>Dif</b> = puntos anotados menos puntos recibidos en todos tus partidos.</p>
+  ${rows.length?`<div class="panel tbl-wrap rk"><table><thead><tr><th>#</th><th>Jugador</th><th>Rating</th><th>PJ</th><th>PG</th><th>%</th><th>Dif</th><th>Últimos</th></tr></thead><tbody>
+  ${rows.map(([id,x],i)=>{const g=hi>lo?(x.elo-lo)/(hi-lo):1;return`<tr class="${i<3?"top":""}${id===S.uid?" yo":""}" style="--g:${g.toFixed(3)}"><td class="pos ${i<3?"m"+(i+1):""}">${i+1}</td><td class="nm"><b>${esc(pname(id))}</b><div class="muted small">${esc(pfull(id))}</div></td><td class="elo">${Math.round(x.elo)}</td><td>${x.pj}</td><td>${x.pg}</td><td>${x.pj?Math.round(x.pg/x.pj*100):0}</td><td class="${x.pf-x.pc>0?"up":x.pf-x.pc<0?"down":""}">${x.pf-x.pc>0?"+":""}${x.pf-x.pc}</td><td class="muted small">${trend(x.last)}</td></tr>`}).join("")}
+  </tbody></table></div>`:`<div class="panel empty"><strong>Aún sin partidos</strong>El ranking se arma solo en cuanto se capturen marcadores en las retas.</div>`}</div>`;
+}
+
+/* ---------- conexión con el servidor ---------- */
+function getTok(){try{return localStorage.getItem("lareta_token")||""}catch(e){return S._tok||""}}
+function setTok(t){S._tok=t;try{t?localStorage.setItem("lareta_token",t):localStorage.removeItem("lareta_token")}catch(e){}}
+let busyN=0;function busy(d){busyN=Math.max(0,busyN+d);document.body.classList.toggle("busy",busyN>0)}
+function call(accion,datos){
+  return new Promise((res,rej)=>{
+    if(!(window.google&&google.script&&google.script.run))return rej(new Error("Abre la app desde su link de Google."));
+    busy(1);
+    google.script.run.withSuccessHandler(r=>{busy(-1);
+      if(r&&r.ok)return res(r.data);
+      if(r&&r.sesion===false){setTok("");S.uid=null;S.yo=null;S.isOwner=false;S.canWrite=false;go("inicio");refresh(true)}
+      rej(new Error((r&&r.error)||"No se pudo completar."))
+    }).withFailureHandler(e=>{busy(-1);rej(new Error("Sin conexión. Revisa tu internet e intenta de nuevo."))}).api(getTok(),accion,datos||{});
+  });
+}
+function apply(d){
+  if(!d||d.igual)return false;
+  S.version=d.version;S.yo=d.yo||null;S.uid=S.yo?S.yo.id:null;S.isOwner=!!d.admin;S.canWrite=!!S.uid;
+  S.players=Object.fromEntries((d.jugadores||[]).map(j=>[j.id,j]));
+  S.clubs=Object.fromEntries((d.clubs||[]).map(c=>[c.id,c]));
+  S.retas=Object.fromEntries((d.retas||[]).map(r=>[r.id,r]));
+  S.scores=Object.fromEntries((d.marcadores||[]).map(m=>[m.id,m]));
+  S.multas=Object.fromEntries((d.multas||[]).map(m=>[m.id,m]));
+  S.sponsors=Object.fromEntries((d.patrocinadores||[]).map(p=>[p.id,p]));
+  S.loadedPlayers=true;S.status="ready";
+  renderSpons();return true;
+}
+async function refresh(force){
+  try{const d=await call(getTok()?"todo":"publico",{version:force?"":S.version});if(apply(d)){S.keepScroll=true;render()}}
+  catch(e){if(S.status==="loading"){S.status="error";S.err=e.message;render()}}
+}
+async function act(accion,datos,msg){
+  try{const r=await call(accion,datos);await refresh(true);if(msg)flash(msg);return r}
+  catch(e){flash(e.message);refresh(true);return null}
+}
+
+/* ---------- acciones ---------- */
+function readDraft(form){const d=S.draft;const f=new FormData(form);
+  d.clubTexto=f.get("clubTexto")||"";
+  d.fecha=f.get("fecha");d.hora=f.get("hora");d.canchas=Math.max(1,+f.get("canchas")||1);d.maxJugadores=Math.max(4,+f.get("maxJugadores")||4);
+  d.tipo=f.get("tipo");d.modo=f.get("modo");d.puntos=Math.max(1,+f.get("puntos")||1);d.castigo=f.get("castigo");d.extra=f.get("extra");
+  const presets=f.getAll("preset").map(i=>PRESET_RULES[+i]);d.reglas=[...presets,...d.reglas.filter(r=>!PRESET_RULES.includes(r))];}
+function setIns(r,lista,msg){S.retas[r.id]={...r,jugadores:lista};S.keepScroll=true;render();return act("inscritos",{retaId:r.id,jugadores:lista},msg)}
+
+document.addEventListener("click",async e=>{
+  const t=e.target.closest("[data-act]");if(!t||t.tagName==="INPUT")return;const a=t.dataset.act;
+  if(a==="tab"){const v=t.dataset.v;if(v==="cuentas"){S.cuentas=null;call("jugadoresAdmin").then(l=>{S.cuentas=l;S.keepScroll=true;render()}).catch(er=>flash(er.message))}
+    if((v==="perfil"||v==="club")&&!S.uid&&v!=="club")return go("inicio");return go(v)}
+  if(a==="skip"){S.welcomed=true;return go("retas")}
+  if(a==="regclub"){S.afterReg="club";return go(S.uid?"club":"registro")}
+  if(a==="nueva"){if(!S.uid)return go("inicio");return go("nueva",{draft:newDraft()})}
+  if(a==="open")return go("reta",{retaId:t.dataset.id});
+  if(a==="addrule"){const f=t.closest("form");readDraft(f);const x=(S.draft.extra||"").trim();if(x&&!S.draft.reglas.includes(x))S.draft.reglas.push(x);S.draft.extra="";S.keepScroll=true;document.activeElement.blur();return render()}
+  if(a==="delrule"){readDraft(t.closest("form"));S.draft.reglas=S.draft.reglas.filter(r=>r!==t.dataset.i);S.keepScroll=true;return render()}
+  if(a==="noimg"){S.sponImg="";S.keepScroll=true;return render()}
+  if(a==="editS"){S.sponImg=undefined;S.editSpon=t.dataset.id||null;S.confirm=null;render();window.scrollTo(0,0);return}
+  if(a==="delSpon"){const id=S.editSpon;S.editSpon=null;S.confirm=null;render();return act("borrarPatrocinador",{id},"Patrocinador borrado")}
+  if(a==="ask"){S.confirm=t.dataset.what;S.keepScroll=true;return render()}
+  if(a==="cancel"){S.confirm=null;S.keepScroll=true;return render()}
+  if(a==="toggleIns"){S.showInscribir=!S.showInscribir;S.keepScroll=true;return render()}
+  if(a==="pinToggle"){S.showPin=!S.showPin;S.keepScroll=true;return render()}
+  if(a==="pinOk"){S.pinNuevo=null;return render()}
+  if(a==="logout"){try{await call("salir")}catch(er){}setTok("");S.uid=null;S.yo=null;S.isOwner=false;S.canWrite=false;S.welcomed=false;S.version="";go("inicio");return refresh(true)}
+  if(a==="resetPin"){const id=t.dataset.id;const r=await act("resetPin",{jugadorId:id});if(r){S.pinNuevo={id,pin:r.pin};S.cuentas=await call("jugadoresAdmin").catch(()=>S.cuentas);render();window.scrollTo(0,0)}return}
+  if(a==="bloquear"){await act("estadoJugador",{jugadorId:t.dataset.id,estado:t.dataset.e},t.dataset.e==="bloqueado"?"Cuenta bloqueada":"Cuenta activa");S.cuentas=await call("jugadoresAdmin").catch(()=>S.cuentas);return render()}
+  const rid=S.retaId,r=S.retas[rid];if(!r||!S.uid)return;
+  if(a==="join"||a==="leave"){let ins=(r.jugadores||[]).filter(x=>x!==S.uid);if(a==="join"){if(ins.length>=r.maxJugadores)return flash("La reta ya está llena.");ins.push(S.uid)}
+    return setIns(r,ins,a==="join"?"Quedaste apuntado":"Te saliste de la reta")}
+  if(a==="swap"){const ins=r.jugadores.slice();const i=+t.dataset.i;const full=ins.length-(ins.length%2);const k=(i+2)%full;[ins[i],ins[k]]=[ins[k],ins[i]];return setIns(r,ins)}
+  if(a==="mixPairs")return setIns(r,shuffle(r.jugadores.slice()));
+  if(a==="sortear"){const ins=r.jugadores||[];let ps;
+    if(r.tipo==="fija")ps=sortearFija(pairsOf(ins),r.canchas);else ps=sortearRoyal(ins,r.canchas,Math.max(1,+document.getElementById("rondas")?.value||4));
+    S.keepScroll=true;return act("partidos",{retaId:rid,partidos:ps},"Partidos sorteados")}
+  if(a==="resortear"){S.keepScroll=true;return act("partidos",{retaId:rid,partidos:[]})}
+  if(a==="multa"){const pid=t.dataset.id;const k=scoreKey(rid,pid);const cambio=+t.dataset.d;const n=Math.max(0,((S.multas[k]||{}).n||0)+cambio);S.multas[k]={id:k,retaId:rid,jugadorId:pid,n};S.keepScroll=true;render();
+    return call("multa",{retaId:rid,jugadorId:pid,cambio}).catch(er=>{flash(er.message);refresh(true)})}
+  if(a==="delReta"){go("retas");return act("borrarReta",{retaId:rid},"Reta borrada")}
+});
+
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.closest("form[data-form='reta']")&&t.type!=="text"&&t.name!=="extra"&&t.name!=="clubTexto"&&t.name!=="castigo"){readDraft(t.closest("form"));S.keepScroll=true;t.blur();render();return}
+  if(t.dataset.act==="sponimg"&&t.files&&t.files[0]){const f=t.files[0];if(f.size>1048576){t.value="";return flash("La imagen pesa más de 1 MB. Redúcela e intenta de nuevo.")}
+    const rd=new FileReader();rd.onload=()=>{const b64=String(rd.result).split(",")[1];flash("Subiendo imagen…");
+      call("subirImagen",{tipo:f.type,base64:b64}).then(r=>{S.sponImg=r.imagenId;S.keepScroll=true;document.activeElement?.blur();render();flash("Imagen lista. Guarda para aplicarla.")}).catch(er=>flash(er.message))};
+    rd.readAsDataURL(f);return}
+  const sf=t.closest("form[data-form='spon']");if(sf){const svg=sf.querySelector("svg");if(svg){const fd=new FormData(sf);svg.outerHTML=logoSVG({nombre:fd.get("nombre"),siglas:fd.get("siglas"),forma:fd.get("forma"),color:fd.get("color"),tinta:fd.get("tinta")},56)}return}
+  const a=t.dataset.act;const rid=S.retaId,r=S.retas[rid];if(!r||!S.uid)return;
+  if(a==="ins"){let ins=(r.jugadores||[]).slice();const id=t.dataset.id;
+    if(t.checked){if(ins.length>=r.maxJugadores){t.checked=false;return flash("La reta ya está llena.")}if(!ins.includes(id))ins.push(id)}else ins=ins.filter(x=>x!==id);
+    setIns(r,ins);return}
+  if(a==="score"){const mid=t.dataset.m;const k=scoreKey(rid,mid);const cur={...(S.scores[k]||{id:k,retaId:rid,matchId:mid,a:null,b:null})};
+    const v=t.value===""?null:Math.max(0,Math.min(99,Math.round(+t.value)));cur[t.dataset.side]=v;
+    S.scores[k]=cur;S.keepScroll=true;S.dirty=true;
+    setTimeout(()=>{const ae=document.activeElement;if(!(ae&&ae.closest&&ae.closest("#main")&&/INPUT|SELECT|TEXTAREA/.test(ae.tagName)))render()},60);
+    call("marcador",{retaId:rid,matchId:mid,a:cur.a,b:cur.b}).catch(er=>{flash(er.message);refresh(true)})}
+});
+document.addEventListener("focusout",()=>setTimeout(()=>{if(S.dirty&&!document.activeElement?.closest?.("#main input,#main select,#main textarea")){S.keepScroll=true;render()}},0));
+
+document.addEventListener("submit",async e=>{
+  e.preventDefault();const f=e.target;const kind=f.dataset.form;const fd=new FormData(f);const g=k=>String(fd.get(k)||"").trim();
+  document.activeElement?.blur();
+  if(kind==="login"){const cel=g("celular").replace(/\D/g,""),pin=g("pin");
+    if(cel.length!==10)return flash("Escribe tu celular a 10 dígitos.");if(!/^\d{6}$/.test(pin))return flash("El PIN es de 6 números.");
+    try{const r=await call("entrar",{celular:cel,pin});setTok(r.token);S.welcomed=true;S.version="";await refresh(true);go("retas");flash("Hola, "+(r.yo.alias||r.yo.nombre))}catch(er){flash(er.message)}return}
+  if(kind==="registro"){const cel=g("celular").replace(/\D/g,""),pin=g("pin");
+    if(!g("nombre"))return flash("Escribe tu nombre.");if(cel.length!==10)return flash("Escribe tu celular a 10 dígitos.");
+    if(!/^\d{6}$/.test(pin))return flash("El PIN debe ser de 6 números.");if(pin!==g("pin2"))return flash("Los dos PIN no coinciden.");
+    try{const r=await call("registro",{nombre:g("nombre"),apellido:g("apellido"),alias:g("alias"),celular:cel,pin});setTok(r.token);S.welcomed=true;S.version="";await refresh(true);
+      const next=S.afterReg==="club"?"club":"retas";S.afterReg=null;go(next);flash(r.yo.rol==="ADMIN"?"Cuenta creada. Eres el administrador.":"¡Listo! Ya estás registrado.")}catch(er){flash(er.message)}return}
+  if(kind==="perfil"){if(!g("nombre"))return flash("Escribe tu nombre.");return act("perfil",{nombre:g("nombre"),apellido:g("apellido"),alias:g("alias")},"Perfil guardado")}
+  if(kind==="pin"){if(!/^\d{6}$/.test(g("nuevo")))return flash("El PIN nuevo debe ser de 6 números.");if(g("nuevo")!==g("nuevo2"))return flash("Los PIN nuevos no coinciden.");
+    const r=await act("cambiarPin",{actual:g("actual"),nuevo:g("nuevo")});if(r){S.showPin=false;render();flash("PIN cambiado")}return}
+  if(kind==="club"){if(!g("nombre"))return flash("Escribe el nombre del club.");
+    return act("club",{nombre:g("nombre"),ciudad:g("ciudad"),direccion:g("direccion"),canchas:+fd.get("canchas")||null,telefono:g("telefono"),horario:g("horario")},"Club guardado")}
+  if(kind==="spon"){const data={id:S.editSpon==="new"?"":S.editSpon,nombre:g("nombre"),giro:g("giro"),paquete:g("paquete"),cancha:+fd.get("cancha")||null,cuota:+fd.get("cuota")||0,
+      forma:g("forma"),color:g("color"),tinta:g("tinta"),siglas:g("siglas").toUpperCase(),contacto:g("contacto"),premio:g("premio"),lema:g("lema"),activo:fd.get("activo")==="on"};
+    const prev=S.editSpon!=="new"?(S.sponsors[S.editSpon]||{}).imagenId:"";data.imagenId=S.sponImg!==undefined?S.sponImg:(prev||"");
+    if(!data.nombre)return flash("Escribe el nombre de la marca.");
+    const r=await act("patrocinador",data,"Patrocinador guardado");if(r){S.editSpon=null;S.sponImg=undefined;render()}return}
+  if(kind==="reta"){readDraft(f);const d=S.draft;if(!d.clubTexto.trim())return flash("Escribe el club.");
+    const r=await act("crearReta",{club:d.clubTexto.trim(),fecha:d.fecha,hora:d.hora,canchas:d.canchas,maxJugadores:d.maxJugadores,tipo:d.tipo,puntos:d.puntos,modo:d.modo,reglas:d.reglas,castigo:d.castigo},"Reta creada. Apúntate e invita a los demás.");
+    if(r){S.draft=null;go("reta",{retaId:r.id})}}
+});
+
+/* ---------- arranque ---------- */
+(async()=>{
+  S.version="";
+  await refresh(true);
+  if(S.status!=="ready")return;
+  S.view=S.uid?"retas":"inicio";
+  render();
+  setInterval(()=>{if(document.hidden||S.dirty)return;const ae=document.activeElement;if(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName))return;refresh(false)},20000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh(false)});
+})();
+</script>

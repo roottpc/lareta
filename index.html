@@ -130,6 +130,40 @@ tr.first .pos{color:var(--ball);text-shadow:var(--glow)}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--head);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
 nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.q{appearance:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--ball);background:transparent;color:var(--ball);font:800 13px/1 var(--f-body);display:inline-grid;place-items:center;cursor:pointer;vertical-align:middle;margin-left:6px;padding:0;flex:none}
+.q.on{background:var(--ball);color:var(--ball-ink)}
+.lbl{display:flex;align-items:center;gap:0}
+.ayuda{border-left:3px solid var(--ball);background:rgba(212,255,31,.07);border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.45}
+.ayuda b{color:var(--ball)}
+.precio-tbl{width:100%;border-collapse:collapse}
+.precio-tbl td{padding:10px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:normal}
+.precio-tbl td:first-child{width:auto;text-align:left}
+.precio-tbl td:last-child{width:96px;text-align:right;font-family:var(--f-display);font-weight:800;font-size:22px;color:var(--ball)}
+.precio-tbl tr:last-child td{border-bottom:0}
+.franja{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px}
+.promo{position:relative;border-radius:12px;padding:14px 16px;background:linear-gradient(110deg,rgba(212,255,31,.16),rgba(212,255,31,.02));border:1px solid rgba(212,255,31,.55)}
+.promo .t{font-family:var(--f-display);font-weight:800;font-size:22px;text-transform:uppercase;color:var(--ball);padding-right:60px}
+.promo .tag{position:absolute;right:12px;top:12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;background:var(--ball);color:var(--ball-ink);border-radius:999px;padding:3px 9px}
+.slot .p{display:block;font-size:10px;font-weight:600;opacity:.9;margin-top:2px}
+.slot.promo2{border-color:#ffd45a;color:#ffd45a}
+.court-c .tags{position:absolute;left:0;right:0;top:27px;text-align:center;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#cfe7ff}
+.court-c.con-tags{padding-top:48px}
+.court-c.off{filter:grayscale(.85);opacity:.7}
+.court-c .offnote{position:relative;text-align:center;font-weight:700;color:#fff;background:rgba(0,0,0,.55);border-radius:8px;padding:6px;margin-bottom:8px;font-size:12px}
+.tabs2{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.tabs2::-webkit-scrollbar{display:none}
+.tabs2 button{flex:none;appearance:none;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);font-weight:600;font-size:14px;cursor:pointer}
+.tabs2 button.on{background:var(--ball);color:var(--ball-ink);border-color:var(--ball)}
+.item{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.item:first-of-type{border-top:0;padding-top:0}
+.diasel{display:flex;gap:4px;flex-wrap:wrap}
+.diasel button{appearance:none;width:36px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-weight:700;cursor:pointer}
+.diasel button.on{background:var(--ball);border-color:var(--ball);color:var(--ball-ink)}
+.toggle{appearance:none;width:48px;height:28px;border-radius:999px;background:var(--ball);position:relative;flex:none;border:0;cursor:pointer;padding:0}
+.toggle::after{content:"";position:absolute;right:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#0a0d00;transition:all .15s}
+.toggle.off{background:#2a3134}.toggle.off::after{right:23px;background:#8c958b}
+.xbtn{appearance:none;border:1px solid var(--line);background:transparent;color:var(--bad);border-radius:8px;padding:6px 10px;font-weight:600;cursor:pointer}
+.guardar-bar{padding-top:4px}
 .days{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
 .days::-webkit-scrollbar{display:none}
 .day{flex:none;appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:8px 12px;text-align:center;cursor:pointer;min-width:62px}
@@ -652,13 +686,16 @@ function slotsClub(c,fecha){
   const bl={};(S.bloqueos||[]).forEach(b=>{if(b.clubId===c.id&&b.fecha===fecha)bl[b.cancha+"_"+b.hora]=b});
   const rs=Object.entries(S.retas).filter(([,r])=>!esHist(r)&&r.fecha===fecha&&norm(r.club||r.clubTexto)===norm(c.nombre));
   const out=[];
-  for(let k=1;k<=n;k++){const lista=[];
+  const info=c.canchasInfo||[];
+  for(let k=1;k<=n;k++){const lista=[];const off=info[k-1]&&info[k-1].activa===false;
     for(let m=ap;m+tu<=ci;m+=tu){const h=deMin(m);let est="libre",nota="";
       const reta=rs.find(([,r])=>k<=(r.canchas||1)&&m<aMin(r.hora)+RETA_MIN&&m+tu>aMin(r.hora));
-      if(reta){est="reta";nota="Reta"}
+      if(off){est="ocupado";nota="Fuera"}
+      else if(reta){est="reta";nota="Reta"}
       else if(bl[k+"_"+h]){est="ocupado";nota=bl[k+"_"+h].nota||"Ocupado"}
       const pas=fecha<hoy||(fecha===hoy&&m+tu<=minAhora);
-      lista.push({h,m,est,nota,pas,retaId:reta?reta[0]:null})}
+      const pr=precioEn(c,fecha,m);
+      lista.push({h,m,est,nota,pas,retaId:reta?reta[0]:null,precio:pr.precio,promo:!!pr.promo})}
     out.push(lista)}
   return out;
 }
@@ -670,7 +707,7 @@ function vClubs(){
   ${l.length?`<div class="stack" style="gap:10px">${l.map(c=>{const libres=slotsClub(c,hoy).flat().filter(x=>x.est==="libre"&&!x.pas).length;
     return`<button class="club-card" data-act="verClub" data-id="${esc(c.id)}">${(c.fotos||[])[0]?`<img class="ph" src="${fotoURL(c.fotos[0],400)}" alt="" referrerpolicy="no-referrer">`:`<span class="ph">${esc((c.nombre||"?").slice(0,2).toUpperCase())}</span>`}
     <span><div class="alias">${esc(c.nombre)}</div><div class="muted small">${esc([c.direccion,c.ciudad].filter(Boolean).join(" · "))}</div>
-    <div class="row" style="margin-top:6px;gap:6px"><span class="chip">${c.canchas||1} cancha${(c.canchas||1)>1?"s":""}</span><span class="chip falta">${libres} libre${libres===1?"":"s"} hoy</span></div></span></button>`}).join("")}</div>`
+    <div class="row" style="margin-top:6px;gap:6px"><span class="chip">${c.canchas||1} cancha${(c.canchas||1)>1?"s":""}</span><span class="chip falta">${libres} libre${libres===1?"":"s"} hoy</span>${promoHoy(c)?`<span class="chip ball">Promo hoy</span>`:""}</div></span></button>`}).join("")}</div>`
    :`<div class="panel empty"><strong>Aún no hay clubs</strong>Los clubs se registran desde su perfil y aquí aparecen con sus canchas y horarios.</div>`}</div>`;
 }
 function vClubPub(){
@@ -690,13 +727,24 @@ function vClubPub(){
     ${S.uid?`<button class="btn primary" data-act="retaEnClub" data-id="${esc(c.id)}">Crear reta aquí</button>`:""}</div>
     ${mio?`<div class="acciones"><button class="btn ${ed?"ball":""}" data-act="editHorarios">${ed?"Listo":"Editar disponibilidad"}</button><button class="btn" data-act="tab" data-v="club">Editar club y fotos</button></div>`:""}
   </div>
+  ${(()=>{const hoyF=today();const prox=diasProx(7);const ps=(c.promos||[]).filter(p=>p.activa!==false&&prox.some(f=>promoVigente(p,f)));
+    return ps.length?`<div class="section-head"><h2>Promociones</h2><span class="muted small">${ps.length} activa${ps.length>1?"s":""}</span></div>`+ps.map(p=>{const hoy=promoVigente(p,hoyF)&&(p.dias||[]).includes(dow(hoyF));
+      const ej=(c.precios||[]).find(fr=>(p.dias||[]).some(x=>(fr.dias||[]).includes(x))&&aMin(fr.desde)<=aMin(p.desde)&&aMin(p.desde)<aMin(fr.hasta));
+      return`<div class="promo">${hoy?`<span class="tag">Hoy</span>`:""}<div class="t">${esc(p.titulo)}</div>${p.desc?`<div class="small" style="margin-top:4px">${esc(p.desc)}</div>`:""}
+      <div class="muted small" style="margin-top:6px">${p.tipo==="fijo"?`<b style="color:var(--ball)">${dinero(p.valor)}</b> por hora`:`<b style="color:var(--ball)">${p.valor}% de descuento</b>${ej?` · ${dinero(ej.precio)} → <b style="color:var(--ball)">${dinero(Math.round(ej.precio*(1-p.valor/100)))}</b>`:""}`} · ${fmtDias(p.dias)} · ${fmtCorta(p.desde)} – ${fmtCorta(p.hasta)}${p.fin?` · hasta el ${new Date(p.fin+"T12:00").toLocaleDateString("es-MX",{day:"numeric",month:"short"})}`:""}</div></div>`}).join(""):""})()}
+  ${(c.precios||[]).length?`<div class="section-head"><h2>Precios por hora</h2><span class="muted small">por cancha</span></div>
+  <div class="panel"><table class="precio-tbl">${c.precios.map((p,i)=>`<tr><td><span class="franja" style="background:${COLORES_FR[i%COLORES_FR.length]}"></span><b>${esc(p.nombre||"Franja "+(i+1))}</b><div class="muted small">${fmtDias(p.dias)} · ${fmtCorta(p.desde)} – ${fmtCorta(p.hasta)}</div></td><td>${dinero(p.precio)}</td></tr>`).join("")}</table>
+  ${c.extras?`<p class="muted small" style="margin:10px 0 0">${esc(c.extras)}</p>`:""}</div>`:""}
   <div class="section-head"><h2>Horarios</h2><span class="muted small">${c.canchas||1} cancha${(c.canchas||1)>1?"s":""}</span></div>
   <div class="days">${dias.map(d=>{const x=dlab(d);return`<button class="day ${d===f?"on":""}" data-act="clubFecha" data-v="${d}"><span>${esc(x.w)}</span><b>${x.n}</b></button>`}).join("")}</div>
   ${ed?`<div class="banner">Toca un horario para marcarlo como ocupado o libre. Las retas de la app apartan sus canchas solas.</div>`:""}
-  <div class="leyenda"><span><i style="border-color:var(--ball);background:rgba(5,20,35,.8)"></i>Disponible</span><span><i style="border-color:rgba(255,255,255,.2);background:#111"></i>Ocupado</span><span><i style="border-color:var(--ball);background:var(--ball)"></i>Reta</span></div>
+  <div class="leyenda"><span><i style="border-color:var(--ball);background:rgba(5,20,35,.8)"></i>Disponible</span>${(c.promos||[]).some(p=>promoVigente(p,f))?`<span><i style="border-color:#ffd45a;background:rgba(5,20,35,.8)"></i>Con promoción</span>`:""}<span><i style="border-color:rgba(255,255,255,.2);background:#111"></i>Ocupado</span><span><i style="border-color:var(--ball);background:var(--ball)"></i>Reta</span></div>
   <div class="courts ${ed?"editando":""}">${sl.map((lista,i)=>{const lib=lista.filter(x=>x.est==="libre"&&!x.pas).length;
-    return`<div class="court-c"><span class="sl1"></span><span class="sl2"></span><span class="cl"></span><span class="net"></span><span class="nm">Cancha ${i+1}</span><span class="lib">${lib} libres</span>
-    <div class="slots">${lista.map(x=>`<button class="slot ${x.est} ${x.pas?"pasado":""}" ${x.est==="reta"&&x.retaId?`data-act="open" data-id="${esc(x.retaId)}"`:ed&&!x.pas&&x.est!=="reta"?`data-act="slot" data-c="${i+1}" data-h="${x.h}"`:`data-act="noop"`} aria-label="Cancha ${i+1}, ${fmtCorta(x.h)}, ${x.est}"><b>${fmtCorta(x.h).replace(" ","")}</b>${x.est!=="libre"?`<small>${esc(x.nota)}</small>`:""}</button>`).join("")}</div></div>`}).join("")}</div>
+    const ci=(c.canchasInfo||[])[i]||{};const off=ci.activa===false;const tags=ci.nombre?[ci.techada?"Techada":"Descubierta",ci.pared==="muro"?"Muro":"Cristal"].join(" · "):"";
+    return`<div class="court-c ${tags?"con-tags":""} ${off?"off":""}"><span class="sl1"></span><span class="sl2"></span><span class="cl"></span><span class="net"></span><span class="nm">${esc(ci.nombre||"Cancha "+(i+1))}</span>${tags?`<span class="tags">${tags}</span>`:""}<span class="lib">${off?"":lib+" libres"}</span>
+    ${off?`<div class="offnote">Fuera de servicio${ci.nota?" · "+esc(ci.nota):""}</div>`:""}
+    <div class="slots">${lista.map(x=>`<button class="slot ${x.est} ${x.promo&&x.est==="libre"?"promo2":""} ${x.pas?"pasado":""}" ${x.est==="reta"&&x.retaId?`data-act="open" data-id="${esc(x.retaId)}"`:ed&&!x.pas&&x.est!=="reta"?`data-act="slot" data-c="${i+1}" data-h="${x.h}"`:`data-act="noop"`} aria-label="Cancha ${i+1}, ${fmtCorta(x.h)}, ${x.est}"><b>${fmtCorta(x.h).replace(" ","")}</b>${x.est!=="libre"?`<small>${esc(x.nota)}</small>`:x.precio!=null?`<span class="p">${dinero(x.precio)}</span>`:""}</button>`).join("")}</div></div>`}).join("")}</div>
+  ${(c.precios||[]).length?`<p class="muted small" style="margin:0">Precio por hora en cada horario${(c.promos||[]).some(p=>promoVigente(p,f))?"; en dorado, con promoción":""}.</p>`:""}
   ${!mio&&S.uid?`<p class="muted small" style="margin:0">Los horarios los actualiza el club. Para apartar, escríbele por WhatsApp.</p>`:""}
   </div>`;
 }
@@ -707,55 +755,124 @@ async function comprimirFoto(file){
     cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);return cv.toDataURL("image/jpeg",.82).split(",")[1];}
   finally{URL.revokeObjectURL(url)}
 }
+
+/* ---------- precios, promos y ayudas del club ---------- */
+const DIAS_L=["D","L","M","M","J","V","S"],DIAS_N=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+function fmtDias(d){d=(d||[]).slice().sort();const k=d.join("");if(k==="0123456")return"Todos los días";if(k==="12345")return"Lun–Vie";if(k==="06")return"Sáb–Dom";if(k==="1234")return"Lun–Jue";if(k==="123456")return"Lun–Sáb";return d.map(x=>DIAS_N[x]).join(", ")}
+const dow=f=>new Date(f+"T12:00").getDay();
+const dinero=n=>"$"+Number(n||0).toLocaleString("es-MX");
+function promoVigente(p,f){return p.activa!==false&&(!p.inicio||f>=p.inicio)&&(!p.fin||f<=p.fin)}
+function precioEn(c,f,m){const d=dow(f);
+  const fr=(c.precios||[]).find(p=>(p.dias||[]).includes(d)&&aMin(p.desde)<=m&&m<aMin(p.hasta));
+  const pr=(c.promos||[]).find(p=>promoVigente(p,f)&&(p.dias||[]).includes(d)&&aMin(p.desde)<=m&&m<aMin(p.hasta));
+  const base=fr?fr.precio:null;let precio=base;if(pr){precio=pr.tipo==="fijo"?pr.valor:(base!=null?Math.round(base*(1-pr.valor/100)):null)}
+  return{base,precio,promo:pr||null};
+}
+function promoHoy(c){const f=today();return(c.promos||[]).some(p=>promoVigente(p,f)&&(p.dias||[]).includes(dow(f)))}
+const COLORES_FR=["#7fdcff","#ffd45a","#ff7a59","#c08bff","#5be3a1","#ff8fd1","#9db4ff","#f2f5ec"];
+const AYUDA={
+ info:"Estos datos los ven todos los jugadores en la página de tu club. Mantenlos al día para que te encuentren y te escriban.",
+ nombre:"El nombre con el que te conocen. Escríbelo igual que como lo ponen los jugadores al crear una reta, así las retas apartan tus canchas solas.",
+ descripcion:"Una o dos líneas de lo que ofreces: tipo de canchas, techado, estacionamiento, cafetería, regaderas.",
+ direccion:"Con la dirección se arma el botón <b>Cómo llegar</b> que abre Google Maps.",
+ telefono:"El WhatsApp donde te escribirán para apartar cancha. Escribe los 10 dígitos. Se arma el botón <b>WhatsApp</b> con un mensaje listo.",
+ fotos:"Hasta 8 fotos de tus canchas e instalaciones. La primera es la portada en la lista de clubs. Se reducen solas para que carguen rápido.",
+ canchas:"Cuántas canchas tienes y cómo es cada una. La app dibuja cada cancha en tu página con sus horarios adentro.",
+ numCanchas:"Total de canchas de tu club. Si agregas o quitas, se ajusta la lista de abajo.",
+ canchaNombre:"Cómo la llaman en el club, por ejemplo <b>Central</b> o <b>Cancha 1</b>.",
+ canchaTipo:"Techada o descubierta, y si las paredes son de cristal o muro. Se muestra en el dibujo de la cancha.",
+ canchaActiva:"Apágala si está en mantenimiento o no la rentas. Se verá gris y sin horarios disponibles. Puedes dejar una nota, por ejemplo <b>En mantenimiento hasta el 25 oct</b>.",
+ horarios:"A qué hora abres y cierras y cuánto dura cada turno. Con eso la app arma los horarios de cada cancha.",
+ apertura:"Hora del primer turno del día.",
+ cierre:"Hora en que termina el último turno.",
+ turno:"Duración de cada bloque que rentas: 60, 90 o 120 minutos.",
+ disponibilidad:"Para marcar horarios ya rentados entra a <b>Ver mi página</b> y toca <b>Editar disponibilidad</b>. Toca un horario para ponerlo ocupado o libre. Las retas de la app apartan sus canchas solas.",
+ precios:"Precio por hora según el día y la hora. Por ejemplo: mañana $300, noche $450, fin de semana $400. Los jugadores ven la tabla y el precio en cada horario. Si un horario no cae en ninguna franja, no muestra precio.",
+ franjaNombre:"Un nombre corto para identificarla: Mañana, Tarde, Noche, Fin de semana.",
+ franjaDias:"Toca los días en que aplica este precio. Puedes elegir varios.",
+ franjaHoras:"Desde qué hora y hasta qué hora aplica este precio. Ejemplo: de 18:00 a 23:00.",
+ franjaPrecio:"Precio por hora de una cancha, en pesos.",
+ extras:"Otros cobros que quieras mostrar: renta de raquetas, pelotas, iluminación, membresías.",
+ promos:"Descuentos que aparecen destacados en tu página y en dorado en los horarios donde aplican. Puedes prenderlas y apagarlas cuando quieras sin borrarlas.",
+ promoTitulo:"El nombre de la promo que verán en grande, por ejemplo <b>Madrugadores</b> o <b>Happy hour</b>.",
+ promoDesc:"Explica la promo en una línea: qué incluye y cualquier condición.",
+ promoTipo:"<b>% de descuento</b>: se descuenta del precio normal de ese horario. <b>Precio fijo</b>: ese horario cuesta lo que pongas, sin importar la franja.",
+ promoDias:"Días de la semana en que vale la promo.",
+ promoHoras:"Horario en que vale. Solo los turnos que empiezan dentro de este horario muestran el precio con promo.",
+ promoFechas:"Del día que empieza al día que termina. Déjalas vacías para que valga siempre. Al pasar la fecha final se oculta sola.",
+ promoActiva:"Apágala para ocultarla sin borrarla. Vuelve a prenderla cuando quieras."
+};
+function q(k){return`<button type="button" class="q ${S.ayudaK===k?"on":""}" data-act="ayuda" data-k="${k}" aria-label="¿Qué es esto?">?</button>`}
+function ay(k){return S.ayudaK===k?`<div class="ayuda">${AYUDA[k]}</div>`:""}
+function lbl(texto,k,forId){return`<div class="lbl"><label class="label" ${forId?`for="${forId}"`:""}>${texto}</label>${q(k)}</div>${ay(k)}`}
+function setPath(o,path,v){const ks=path.split(".");let x=o;for(let i=0;i<ks.length-1;i++){x=x[ks[i]]}x[ks[ks.length-1]]=v}
+function getPath(o,path){return path.split(".").reduce((x,k)=>x==null?x:x[k],o)}
+function nuevoBorrador(c){const d=JSON.parse(JSON.stringify(c||{}));
+  d.nombre=d.nombre||"";d.ciudad=d.ciudad||"Tepic";d.canchas=d.canchas||2;d.apertura=d.apertura||"07:00";d.cierre=d.cierre||"23:00";d.turno=d.turno||90;
+  d.fotos=d.fotos||[];d.precios=d.precios||[];d.promos=d.promos||[];d.canchasInfo=d.canchasInfo||[];d.extras=d.extras||"";return d}
+function ajustarCanchas(d){const n=Math.max(1,Math.min(20,+d.canchas||1));d.canchas=n;
+  while(d.canchasInfo.length<n)d.canchasInfo.push({nombre:"Cancha "+(d.canchasInfo.length+1),techada:false,pared:"cristal",activa:true,nota:""});
+  d.canchasInfo.length=n}
+const inp=(path,attrs="")=>`value="${esc(getPath(S.cd,path)??"")}" data-f="${path}" ${attrs}`;
+function diasSel(path){const v=getPath(S.cd,path)||[];return`<div class="diasel">${[1,2,3,4,5,6,0].map(d=>`<button type="button" class="${v.includes(d)?"on":""}" data-act="dia" data-f="${path}" data-d="${d}" aria-label="${DIAS_N[d]}">${DIAS_L[d]}</button>`).join("")}</div>`}
 function vClub(){
   if(!S.uid){S.afterReg="club";return vRegistro()}
-  const c=myClub()||{};if(!S.clubFotos)S.clubFotos=(c.fotos||[]).slice();
-  const opt=(v,a)=>`<option value="${v}" ${String(a)===String(v)?"selected":""}>${v} min</option>`;
-  return`<div class="stack"><div class="row between"><button class="btn ghost" data-act="tab" data-v="perfil">← Mi perfil</button>${c.id?`<button class="btn sm" data-act="verClub" data-id="${esc(c.id)}">Ver mi página</button>`:""}</div><h1>${c.id?"Mi club":"Registrar club"}</h1>
-  <form class="panel stack" data-form="club">
-    <div class="field"><label class="label" for="c-nom">Nombre del club</label><input id="c-nom" name="nombre" required value="${esc(c.nombre)}"></div>
-    <div class="field"><label class="label" for="c-desc">Descripción</label><textarea id="c-desc" name="descripcion" rows="2" maxlength="300" placeholder="Ej. 4 canchas techadas, iluminación LED, regaderas y cafetería">${esc(c.descripcion)}</textarea></div>
-    <div class="grid2"><div class="field"><label class="label" for="c-ciu">Ciudad</label><input id="c-ciu" name="ciudad" value="${esc(c.ciudad||"Tepic")}"></div>
-    <div class="field"><label class="label" for="c-can">Número de canchas</label><input id="c-can" name="canchas" type="number" min="1" max="20" value="${esc(c.canchas??2)}"></div></div>
-    <div class="field"><label class="label" for="c-dir">Dirección</label><input id="c-dir" name="direccion" value="${esc(c.direccion)}"></div>
-    <div class="grid3"><div class="field"><label class="label" for="c-ap">Abre</label><input id="c-ap" name="apertura" type="time" value="${esc(c.apertura||"07:00")}"></div>
-    <div class="field"><label class="label" for="c-ci">Cierra</label><input id="c-ci" name="cierre" type="time" value="${esc(c.cierre||"23:00")}"></div>
-    <div class="field"><label class="label" for="c-tu">Turnos de</label><select id="c-tu" name="turno">${opt(60,c.turno||90)}${opt(90,c.turno||90)}${opt(120,c.turno||90)}</select></div></div>
-    <div class="grid2"><div class="field"><label class="label" for="c-tel">WhatsApp / teléfono</label><input id="c-tel" name="telefono" type="tel" value="${esc(c.telefono)}"></div>
-    <div class="field"><label class="label" for="c-hor">Días</label><input id="c-hor" name="horario" value="${esc(c.horario)}" placeholder="Ej. Lun a Dom"></div></div>
-    <div class="field"><span class="label">Fotos del club (hasta 8)</span>
-      <div class="thumbs">${S.clubFotos.map((id,i)=>`<div class="thumb"><img src="${fotoURL(id,300)}" alt="" referrerpolicy="no-referrer"><button type="button" data-act="quitarFoto" data-i="${i}" aria-label="Quitar foto">×</button></div>`).join("")}</div>
-      ${S.clubFotos.length<8?`<input id="c-fotos" type="file" accept="image/*" multiple data-act="fotosClub">`:""}
-      <span class="muted small">Se reducen solas para que carguen rápido. Toca × para quitar una.</span></div>
-    <button class="btn primary" type="submit">${c.id?"Guardar cambios":"Registrar club"}</button></form></div>`}
-
-
-/* ---------- sonido y diagnóstico ---------- */
-let audioCtx=null;
-function desbloquearAudio(){try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume()}catch(e){}}
-document.addEventListener("pointerdown",desbloquearAudio,{passive:true});document.addEventListener("keydown",desbloquearAudio);
-function sonidoOn(){try{return localStorage.getItem("lareta_sonido")!=="0"}catch(e){return true}}
-function sonar(){
-  if(!sonidoOn())return;desbloquearAudio();if(!audioCtx)return;
-  const t0=audioCtx.currentTime+.02;
-  [[1318.5,0],[1760,.16],[2093,.32]].forEach(([f,d])=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type="sine";o.frequency.value=f;
-    g.gain.setValueAtTime(0,t0+d);g.gain.linearRampToValueAtTime(.35,t0+d+.02);g.gain.exponentialRampToValueAtTime(.001,t0+d+.45);
-    o.connect(g).connect(audioCtx.destination);o.start(t0+d);o.stop(t0+d+.5)});
-}
-let tituloBase=document.title,tituloTimer=null;
-function parpadearTitulo(n){clearInterval(tituloTimer);if(!n){document.title=tituloBase;return}let on=false;
-  tituloTimer=setInterval(()=>{on=!on;document.title=on?`(${n}) Nuevo aviso · La Reta`:tituloBase;if(!document.hidden&&S.view==="avisos"){clearInterval(tituloTimer);document.title=tituloBase}},1000)}
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.view==="avisos")parpadearTitulo(0)});
-const esPC=()=>!/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-function ayudaPush(){
-  const p=permisoNotif();const disp=esPC()?"esta computadora":"este celular";
-  if(S.pushOn)return`<div class="banner" style="border-left:3px solid var(--good)"><b>Notificaciones activas en ${disp}.</b> ${esPC()?"Si no ves ni oyes el aviso, revisa que Windows o Mac no tenga “No molestar” activado y que el navegador tenga permiso de notificaciones en la configuración del sistema.":""}</div>`;
-  if(S.pushErr==="nosoporta"||p==="no")return`<div class="banner"><b>Este navegador no permite notificaciones.</b> Usa Chrome, Edge o Firefox actualizados.${esIOS()?" En iPhone: agrega La Reta a la pantalla de inicio y ábrela desde el ícono.":""} Con la app abierta igual te sonará cada aviso.</div>`;
-  if(p==="denied")return`<div class="banner"><b>Las notificaciones están bloqueadas.</b> ${esPC()?"Da clic en el ícono junto a la dirección de la página (candado o ajustes) → <b>Notificaciones: Permitir</b> → recarga la página.":"Abre los ajustes del navegador → Configuración de sitios → Notificaciones → permite roottpc.github.io, y vuelve a abrir La Reta."}</div>`;
-  if(S.pushErr==="brave")return`<div class="banner"><b>Brave tiene apagado el servicio de notificaciones.</b> Ve a Configuración → Privacidad y seguridad → activa <b>“Usar los servicios de Google para mensajería push”</b>, reinicia Brave y toca Activar otra vez. O usa Chrome o Edge.</div>`;
-  if(S.pushErr==="servicio")return`<div class="banner"><b>El navegador no pudo registrar las notificaciones.</b> Prueba en Chrome o Edge, revisa que no estés en ventana de incógnito y vuelve a tocar Activar. Mientras, con la app abierta te sonará cada aviso.</div>`;
-  if(S.pushErr==="servidor")return`<div class="banner"><b>El servidor no respondió.</b> Intenta de nuevo en un momento.</div>`;
-  return"";
+  const c=myClub();if(!S.cd)S.cd=nuevoBorrador(c);const d=S.cd;ajustarCanchas(d);
+  const tab=c?(S.clubTab||"info"):"info";
+  const tabs=[["info","Información"],["canchas","Canchas"],["horarios","Horarios"],["precios","Precios"],["promos","Promos"]];
+  let body="";
+  if(tab==="info")body=`<div class="panel stack"><div class="row between"><h3>Información</h3>${q("info")}</div>${ay("info")}
+    <div class="field">${lbl("Nombre del club","nombre","c-nom")}<input id="c-nom" ${inp("nombre","required")}></div>
+    <div class="field">${lbl("Descripción","descripcion","c-desc")}<textarea id="c-desc" rows="2" maxlength="300" data-f="descripcion" placeholder="Ej. 4 canchas techadas, iluminación LED, regaderas y cafetería">${esc(d.descripcion||"")}</textarea></div>
+    <div class="field">${lbl("Dirección","direccion","c-dir")}<input id="c-dir" ${inp("direccion")}></div>
+    <div class="grid2"><div class="field"><label class="label" for="c-ciu">Ciudad</label><input id="c-ciu" ${inp("ciudad")}></div>
+    <div class="field">${lbl("WhatsApp","telefono","c-tel")}<input id="c-tel" type="tel" ${inp("telefono")}></div></div>
+    <div class="field">${lbl("Fotos del club (hasta 8)","fotos")}
+      <div class="thumbs">${d.fotos.map((id,i)=>`<div class="thumb"><img src="${fotoURL(id,300)}" alt="" referrerpolicy="no-referrer"><button type="button" data-act="quitarFoto" data-i="${i}" aria-label="Quitar foto">×</button></div>`).join("")}</div>
+      ${d.fotos.length<8?`<input id="c-fotos" type="file" accept="image/*" multiple data-act="fotosClub" ${c?"":"disabled"}>`:""}
+      ${c?"":`<span class="muted small">Primero registra tu club y después agrega fotos.</span>`}</div></div>`;
+  if(tab==="canchas")body=`<div class="panel stack"><div class="row between"><h3>Canchas</h3>${q("canchas")}</div>${ay("canchas")}
+    <div class="field" style="max-width:220px">${lbl("Número de canchas","numCanchas","c-can")}<input id="c-can" type="number" min="1" max="20" ${inp("canchas")} data-t="num" data-re="1"></div>
+    ${d.canchasInfo.map((x,i)=>`<div class="item"><div class="row between"><div class="field" style="flex:1">${i===0?lbl("Nombre","canchaNombre",`cn${i}`):""}<input id="cn${i}" ${inp(`canchasInfo.${i}.nombre`)}></div>
+      <div style="text-align:center">${i===0?`<div class="lbl" style="justify-content:center"><span class="label">Activa</span>${q("canchaActiva")}</div>`:""}<button type="button" class="toggle ${x.activa?"":"off"}" data-act="tog" data-f="canchasInfo.${i}.activa" aria-label="Cancha activa"></button></div></div>
+      ${i===0?ay("canchaActiva"):""}
+      <div class="row" style="gap:6px">${i===0?`<span class="label" style="margin-right:2px">Tipo</span>${q("canchaTipo")}`:""}
+        <button type="button" class="chip ${x.techada?"court":""}" data-act="tog" data-f="canchasInfo.${i}.techada">${x.techada?"Techada":"Descubierta"}</button>
+        <button type="button" class="chip" data-act="pared" data-f="canchasInfo.${i}.pared">${x.pared==="muro"?"Muro":"Cristal"}</button></div>
+      ${i===0?ay("canchaTipo"):""}
+      ${!x.activa?`<input placeholder="Nota: ej. En mantenimiento hasta el 25 oct" ${inp(`canchasInfo.${i}.nota`)}>`:""}</div>`).join("")}</div>`;
+  if(tab==="horarios")body=`<div class="panel stack"><div class="row between"><h3>Horarios</h3>${q("horarios")}</div>${ay("horarios")}
+    <div class="grid3"><div class="field">${lbl("Abre","apertura","c-ap")}<input id="c-ap" type="time" ${inp("apertura")}></div>
+    <div class="field">${lbl("Cierra","cierre","c-ci")}<input id="c-ci" type="time" ${inp("cierre")}></div>
+    <div class="field">${lbl("Turnos de","turno","c-tu")}<select id="c-tu" data-f="turno" data-t="num">${[60,90,120].map(v=>`<option value="${v}" ${+d.turno===v?"selected":""}>${v} min</option>`).join("")}</select></div></div>
+    <div class="row between" style="border-top:1px solid var(--line);padding-top:12px"><div><b>Marcar horarios ocupados</b><div class="muted small">Se hace desde tu página</div></div><span class="row" style="gap:6px">${q("disponibilidad")}${c?`<button type="button" class="btn sm" data-act="verClub" data-id="${esc(c.id)}">Ir</button>`:""}</span></div>${ay("disponibilidad")}</div>`;
+  if(tab==="precios")body=`<div class="panel stack"><div class="row between"><h3>Precios por hora</h3>${q("precios")}</div>${ay("precios")}
+    ${d.precios.map((p,i)=>`<div class="item"><div class="row between"><div class="field" style="flex:1">${i===0?lbl("Franja","franjaNombre",`pn${i}`):""}<input id="pn${i}" placeholder="Ej. Mañana" ${inp(`precios.${i}.nombre`)}></div><button type="button" class="xbtn" data-act="quitarItem" data-f="precios" data-i="${i}" style="align-self:flex-end">Quitar</button></div>
+      <div>${i===0?lbl("Días","franjaDias"):""}${diasSel(`precios.${i}.dias`)}</div>
+      <div class="grid3"><div class="field">${i===0?lbl("Desde","franjaHoras",`pd${i}`):`<label class="label" for="pd${i}">Desde</label>`}<input id="pd${i}" type="time" ${inp(`precios.${i}.desde`)}></div>
+      <div class="field"><label class="label" for="ph${i}">Hasta</label><input id="ph${i}" type="time" ${inp(`precios.${i}.hasta`)}></div>
+      <div class="field">${i===0?lbl("$ por hora","franjaPrecio",`pp${i}`):`<label class="label" for="pp${i}">$ por hora</label>`}<input id="pp${i}" type="number" min="0" step="10" inputmode="numeric" ${inp(`precios.${i}.precio`)} data-t="num"></div></div></div>`).join("")}
+    ${d.precios.length<12?`<button type="button" class="btn" data-act="agregarFranja">+ Agregar franja de precio</button>`:""}
+    <div class="field">${lbl("Extras (opcional)","extras","c-ext")}<input id="c-ext" placeholder="Ej. Renta de raquetas $50 · Tubo de pelotas $180" ${inp("extras")}></div></div>`;
+  if(tab==="promos")body=`<div class="panel stack"><div class="row between"><h3>Promociones</h3>${q("promos")}</div>${ay("promos")}
+    ${d.promos.map((p,i)=>`<div class="item"><div class="row between"><div class="field" style="flex:1">${i===0?lbl("Título","promoTitulo",`mt${i}`):""}<input id="mt${i}" placeholder="Ej. Madrugadores" ${inp(`promos.${i}.titulo`)}></div>
+        <div style="text-align:center">${i===0?`<div class="lbl" style="justify-content:center"><span class="label">Activa</span>${q("promoActiva")}</div>`:""}<button type="button" class="toggle ${p.activa!==false?"":"off"}" data-act="tog" data-f="promos.${i}.activa" aria-label="Promoción activa"></button></div></div>
+      ${i===0?ay("promoActiva"):""}
+      <div class="field">${i===0?lbl("Descripción","promoDesc",`md${i}`):""}<input id="md${i}" placeholder="Ej. 20% de descuento entre semana temprano" ${inp(`promos.${i}.desc`)}></div>
+      <div class="grid2"><div class="field">${i===0?lbl("Tipo","promoTipo",`mk${i}`):`<label class="label" for="mk${i}">Tipo</label>`}<select id="mk${i}" data-f="promos.${i}.tipo" data-re="1"><option value="pct" ${p.tipo!=="fijo"?"selected":""}>% de descuento</option><option value="fijo" ${p.tipo==="fijo"?"selected":""}>Precio fijo por hora</option></select></div>
+      <div class="field"><label class="label" for="mv${i}">${p.tipo==="fijo"?"$ por hora":"% de descuento"}</label><input id="mv${i}" type="number" min="0" inputmode="numeric" ${inp(`promos.${i}.valor`)} data-t="num"></div></div>
+      <div>${i===0?lbl("Días","promoDias"):""}${diasSel(`promos.${i}.dias`)}</div>
+      <div class="grid2"><div class="field">${i===0?lbl("Desde","promoHoras",`ms${i}`):`<label class="label" for="ms${i}">Desde</label>`}<input id="ms${i}" type="time" ${inp(`promos.${i}.desde`)}></div>
+      <div class="field"><label class="label" for="mh${i}">Hasta</label><input id="mh${i}" type="time" ${inp(`promos.${i}.hasta`)}></div></div>
+      <div class="grid2"><div class="field">${i===0?lbl("Empieza","promoFechas",`mi${i}`):`<label class="label" for="mi${i}">Empieza</label>`}<input id="mi${i}" type="date" ${inp(`promos.${i}.inicio`)}></div>
+      <div class="field"><label class="label" for="mf${i}">Termina</label><input id="mf${i}" type="date" ${inp(`promos.${i}.fin`)}></div></div>
+      <button type="button" class="xbtn" data-act="quitarItem" data-f="promos" data-i="${i}">Quitar promoción</button></div>`).join("")}
+    ${d.promos.length<10?`<button type="button" class="btn ${d.promos.length?"":"primary"}" data-act="agregarPromo">+ Nueva promoción</button>`:""}</div>`;
+  return`<div class="stack"><div class="row between"><button class="btn ghost" data-act="tab" data-v="perfil">← Mi perfil</button>${c?`<button class="btn sm" data-act="verClub" data-id="${esc(c.id)}">Ver mi página</button>`:""}</div>
+  <h1>${c?"Administrar club":"Registrar club"}</h1>
+  ${c?`<div class="tabs2">${tabs.map(([k,t])=>`<button type="button" class="${tab===k?"on":""}" data-act="clubTab" data-v="${k}">${t}</button>`).join("")}</div>`:`<p class="muted" style="margin:0">Empieza con los datos básicos. Después podrás agregar canchas, horarios, precios, promociones y fotos.</p>`}
+  ${body}
+  <div class="guardar-bar"><button type="button" class="btn primary" style="width:100%" data-act="guardarClub">${c?"Guardar cambios":"Registrar club"}</button></div></div>`;
 }
 
 function vWelcome(){
@@ -931,7 +1048,7 @@ function setIns(r,lista,msg){S.retas[r.id]={...r,jugadores:lista};S.keepScroll=t
 
 document.addEventListener("click",async e=>{
   const t=e.target.closest("[data-act]");if(!t||t.tagName==="INPUT")return;const a=t.dataset.act;
-  if(a==="tab"){const v=t.dataset.v;if(v==="club")S.clubFotos=null;if(v==="cuentas"){S.cuentas=null;call("jugadoresAdmin").then(l=>{S.cuentas=l;S.keepScroll=true;render()}).catch(er=>flash(er.message))}
+  if(a==="tab"){const v=t.dataset.v;if(v==="club"){S.cd=null;S.ayudaK=null}if(v==="cuentas"){S.cuentas=null;call("jugadoresAdmin").then(l=>{S.cuentas=l;S.keepScroll=true;render()}).catch(er=>flash(er.message))}
     if((v==="perfil"||v==="club")&&!S.uid&&v!=="club")return go("inicio");return go(v)}
   if(a==="skip"){S.welcomed=true;return go("retas")}
   if(a==="entrarReta"){S.volverReta=S.retaId;return go("inicio")}
@@ -940,7 +1057,21 @@ document.addEventListener("click",async e=>{
   if(a==="clubFecha"){S.clubFecha=t.dataset.v;S.keepScroll=true;return render()}
   if(a==="editHorarios"){S.editHorarios=!S.editHorarios;S.keepScroll=true;return render()}
   if(a==="retaEnClub"){const c=S.clubs[t.dataset.id];const d=newDraft();d.clubTexto=c.nombre;d.canchas=Math.min(d.canchas,c.canchas||d.canchas);if(S.clubFecha)d.fecha=S.clubFecha;return go("nueva",{draft:d})}
-  if(a==="quitarFoto"){S.clubFotos.splice(+t.dataset.i,1);S.keepScroll=true;return render()}
+  if(a==="quitarFoto"){S.cd.fotos.splice(+t.dataset.i,1);S.keepScroll=true;return render()}
+  if(a==="ayuda"){S.ayudaK=S.ayudaK===t.dataset.k?null:t.dataset.k;S.keepScroll=true;return render()}
+  if(a==="clubTab"){S.clubTab=t.dataset.v;S.ayudaK=null;S.keepScroll=true;return render()}
+  if(a==="dia"){const arr=getPath(S.cd,t.dataset.f)||[];const d=+t.dataset.d;setPath(S.cd,t.dataset.f,arr.includes(d)?arr.filter(x=>x!==d):[...arr,d]);S.keepScroll=true;return render()}
+  if(a==="tog"){setPath(S.cd,t.dataset.f,!getPath(S.cd,t.dataset.f));S.keepScroll=true;return render()}
+  if(a==="pared"){setPath(S.cd,t.dataset.f,getPath(S.cd,t.dataset.f)==="muro"?"cristal":"muro");S.keepScroll=true;return render()}
+  if(a==="quitarItem"){S.cd[t.dataset.f].splice(+t.dataset.i,1);S.keepScroll=true;return render()}
+  if(a==="agregarFranja"){const n=S.cd.precios.length;const pre=[["Mañana",[1,2,3,4,5],S.cd.apertura,"14:00"],["Tarde",[1,2,3,4,5],"14:00","18:00"],["Noche",[1,2,3,4,5],"18:00",S.cd.cierre],["Fin de semana",[0,6],S.cd.apertura,S.cd.cierre]][n]||["",[1,2,3,4,5],S.cd.apertura,S.cd.cierre];
+    S.cd.precios.push({nombre:pre[0],dias:pre[1],desde:pre[2],hasta:pre[3],precio:""});S.keepScroll=true;return render()}
+  if(a==="agregarPromo"){S.cd.promos.push({titulo:"",desc:"",tipo:"pct",valor:20,dias:[1,2,3,4,5],desde:S.cd.apertura,hasta:"10:00",inicio:"",fin:"",activa:true});S.keepScroll=true;return render()}
+  if(a==="guardarClub"){const d=S.cd;if(!String(d.nombre||"").trim()){S.clubTab="info";render();return flash("Escribe el nombre del club.")}
+    if(d.promos.some(p=>!String(p.titulo||"").trim()))return flash("Ponle título a cada promoción o quítala.");
+    if(d.precios.some(p=>!(+p.precio>0)||!(p.dias||[]).length))return flash("Cada franja necesita días y precio.");
+    const cc=myClub();const r=await act("club",{...d,id:cc?cc.id:""},cc?"Cambios guardados":"Club registrado");
+    if(r){S.cd=nuevoBorrador(r);if(!cc){S.clubTab="canchas"}S.keepScroll=true;render()}return}
   if(a==="slot"){const c=S.clubs[S.clubId];const k=+t.dataset.c,h=t.dataset.h,f=S.clubFecha;
     const i=(S.bloqueos||[]).findIndex(b=>b.clubId===c.id&&b.fecha===f&&+b.cancha===k&&b.hora===h);const ocupar=i<0;
     if(ocupar)S.bloqueos.push({clubId:c.id,fecha:f,cancha:k,hora:h,nota:"Ocupado"});else S.bloqueos.splice(i,1);
@@ -990,8 +1121,9 @@ document.addEventListener("click",async e=>{
 document.addEventListener("change",e=>{
   const t=e.target;
   if(t.closest("form[data-form='reta']")&&t.type!=="text"&&t.name!=="extra"&&t.name!=="clubTexto"&&t.name!=="castigo"){readDraft(t.closest("form"));S.keepScroll=true;t.blur();render();return}
-  if(t.dataset.act==="fotosClub"&&t.files&&t.files.length){const fs=[...t.files].slice(0,8-S.clubFotos.length);t.value="";const c=myClub();
-    (async()=>{for(const f of fs){try{flash("Subiendo foto…");const b64=await comprimirFoto(f);const r=await call("subirImagen",{para:"club",clubId:c?c.id:"",tipo:"image/jpeg",base64:b64});S.clubFotos.push(r.imagenId);S.keepScroll=true;document.activeElement?.blur();render()}catch(er){flash(er.message||"No se pudo subir la foto.")}}
+  if(t.dataset.f){let v=t.type==="checkbox"?t.checked:t.value;if(t.dataset.t==="num")v=v===""?"":+v;setPath(S.cd,t.dataset.f,v);if(t.dataset.re){S.keepScroll=true;t.blur();render()}return}
+  if(t.dataset.act==="fotosClub"&&t.files&&t.files.length){const fs=[...t.files].slice(0,8-S.cd.fotos.length);t.value="";const c=myClub();
+    (async()=>{for(const f of fs){try{flash("Subiendo foto…");const b64=await comprimirFoto(f);const r=await call("subirImagen",{para:"club",clubId:c?c.id:"",tipo:"image/jpeg",base64:b64});S.cd.fotos.push(r.imagenId);S.keepScroll=true;document.activeElement?.blur();render()}catch(er){flash(er.message||"No se pudo subir la foto.")}}
       flash(myClub()?"Fotos listas. Toca Guardar cambios.":"Primero registra tu club y luego agrega fotos.")})();return}
   if(t.dataset.act==="sponimg"&&t.files&&t.files[0]){const f=t.files[0];if(f.size>1048576){t.value="";return flash("La imagen pesa más de 1 MB. Redúcela e intenta de nuevo.")}
     const rd=new FileReader();rd.onload=()=>{const b64=String(rd.result).split(",")[1];flash("Subiendo imagen…");
@@ -1010,6 +1142,7 @@ document.addEventListener("change",e=>{
     setTimeout(()=>{const ae=document.activeElement;if(!(ae&&ae.closest&&ae.closest("#main")&&/INPUT|SELECT|TEXTAREA/.test(ae.tagName)))render()},60);
     call("marcador",{retaId:rid,matchId:mid,a:cur.a,b:cur.b}).catch(er=>{flash(er.message);refresh(true)})}
 });
+document.addEventListener("input",e=>{const t=e.target;if(!t.dataset||!t.dataset.f||!S.cd||t.dataset.re)return;let v=t.value;if(t.dataset.t==="num")v=v===""?"":+v;setPath(S.cd,t.dataset.f,v)});
 document.addEventListener("focusout",()=>setTimeout(()=>{if(S.dirty&&!document.activeElement?.closest?.("#main input,#main select,#main textarea")){S.keepScroll=true;render()}},0));
 
 document.addEventListener("submit",async e=>{

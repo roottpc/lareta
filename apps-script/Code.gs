@@ -14,7 +14,7 @@ var VERSION_APP = 'La Reta 1.0';
 var HOJAS = {
   JUGADORES: ['id', 'celular', 'nombre', 'apellido', 'alias', 'salt', 'hash', 'rol', 'estado', 'creado', 'actualizado'],
   SESIONES: ['token', 'jugadorId', 'creado', 'ultimo'],
-  CLUBS: ['id', 'ownerId', 'nombre', 'ciudad', 'direccion', 'canchas', 'telefono', 'horario', 'creado', 'actualizado', 'apertura', 'cierre', 'turno', 'fotos', 'descripcion'],
+  CLUBS: ['id', 'ownerId', 'nombre', 'ciudad', 'direccion', 'canchas', 'telefono', 'horario', 'creado', 'actualizado', 'apertura', 'cierre', 'turno', 'fotos', 'descripcion', 'precios', 'promos', 'canchasInfo', 'extras'],
   BLOQUEOS: ['id', 'clubId', 'fecha', 'cancha', 'hora', 'nota', 'porId', 'creado'],
   RETAS: ['id', 'creadorId', 'fecha', 'hora', 'club', 'canchas', 'maxJugadores', 'tipo', 'puntos', 'modo', 'reglas', 'castigo', 'jugadores', 'partidos', 'creado'],
   MARCADORES: ['id', 'retaId', 'matchId', 'a', 'b', 'porId', 'actualizado'],
@@ -23,7 +23,7 @@ var HOJAS = {
   AVISOS: ['id', 'paraId', 'tipo', 'texto', 'retaId', 'deId', 'creado', 'leido'],
   PATROCINADORES: ['id', 'nombre', 'giro', 'paquete', 'cancha', 'cuota', 'forma', 'color', 'tinta', 'siglas', 'contacto', 'premio', 'lema', 'imagenId', 'activo', 'actualizado']
 };
-var JSON_COLS = { reglas: 1, jugadores: 1, partidos: 1, fotos: 1 };
+var JSON_COLS = { reglas: 1, jugadores: 1, partidos: 1, fotos: 1, precios: 1, promos: 1, canchasInfo: 1 };
 var NUM_COLS = { canchas: 1, maxJugadores: 1, puntos: 1, a: 1, b: 1, n: 1, cancha: 1, cuota: 1, turno: 1 };
 var SESION_DIAS = 120;
 var MAX_FALLOS = 5;
@@ -380,6 +380,24 @@ function guardarClub_(yo, d) {
     c.turno = [60, 90, 120].indexOf(Number(d.turno)) >= 0 ? Number(d.turno) : 90;
     c.descripcion = texto_(d.descripcion, 300);
     c.fotos = (d.fotos || []).filter(function (x) { return /^[A-Za-z0-9_-]{10,}$/.test(x); }).slice(0, 8);
+    var dias = function (a) { var o = []; (a || []).forEach(function (x) { x = Number(x); if (x >= 0 && x <= 6 && o.indexOf(x) < 0) o.push(x); }); return o.sort(); };
+    var fecha = function (f) { return /^\d{4}-\d{2}-\d{2}$/.test(String(f || '')) ? String(f) : ''; };
+    var num = function (v, max) { v = Math.round(Number(v) || 0); return Math.max(0, Math.min(max, v)); };
+    c.precios = (d.precios || []).slice(0, 12).map(function (p) {
+      return { nombre: texto_(p.nombre, 30), dias: dias(p.dias), desde: horaValida_(p.desde, c.apertura), hasta: horaValida_(p.hasta, c.cierre), precio: num(p.precio, 20000) };
+    }).filter(function (p) { return p.dias.length && p.precio > 0; });
+    c.promos = (d.promos || []).slice(0, 10).map(function (p) {
+      return { id: /^[a-z0-9]{4,16}$/.test(p.id || '') ? p.id : nuevoId_('pr').slice(0, 12), titulo: texto_(p.titulo, 40), desc: texto_(p.desc, 140),
+        tipo: p.tipo === 'fijo' ? 'fijo' : 'pct', valor: num(p.valor, p.tipo === 'fijo' ? 20000 : 100), dias: dias(p.dias),
+        desde: horaValida_(p.desde, c.apertura), hasta: horaValida_(p.hasta, c.cierre), inicio: fecha(p.inicio), fin: fecha(p.fin), activa: p.activa !== false };
+    }).filter(function (p) { return p.titulo; });
+    var info = d.canchasInfo || [];
+    c.canchasInfo = [];
+    for (var k = 0; k < c.canchas; k++) {
+      var x = info[k] || {};
+      c.canchasInfo.push({ nombre: texto_(x.nombre, 24) || ('Cancha ' + (k + 1)), techada: !!x.techada, pared: x.pared === 'muro' ? 'muro' : 'cristal', activa: x.activa !== false, nota: texto_(x.nota, 60) });
+    }
+    c.extras = texto_(d.extras, 120);
     c.actualizado = ahora_();
     guardar_('CLUBS', c);
     return limpio_(c);

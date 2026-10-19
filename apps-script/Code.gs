@@ -12,11 +12,11 @@
 
 var VERSION_APP = 'La Reta 1.0';
 var HOJAS = {
-  JUGADORES: ['id', 'celular', 'nombre', 'apellido', 'alias', 'salt', 'hash', 'rol', 'estado', 'creado', 'actualizado'],
+  JUGADORES: ['id', 'celular', 'nombre', 'apellido', 'alias', 'salt', 'hash', 'rol', 'estado', 'creado', 'actualizado', 'nivel'],
   SESIONES: ['token', 'jugadorId', 'creado', 'ultimo'],
   CLUBS: ['id', 'ownerId', 'nombre', 'ciudad', 'direccion', 'canchas', 'telefono', 'horario', 'creado', 'actualizado', 'apertura', 'cierre', 'turno', 'fotos', 'descripcion', 'precios', 'promos', 'canchasInfo', 'extras'],
   BLOQUEOS: ['id', 'clubId', 'fecha', 'cancha', 'hora', 'nota', 'porId', 'creado'],
-  RETAS: ['id', 'creadorId', 'fecha', 'hora', 'club', 'canchas', 'maxJugadores', 'tipo', 'puntos', 'modo', 'reglas', 'castigo', 'jugadores', 'partidos', 'creado'],
+  RETAS: ['id', 'creadorId', 'fecha', 'hora', 'club', 'canchas', 'maxJugadores', 'tipo', 'puntos', 'modo', 'reglas', 'castigo', 'jugadores', 'partidos', 'creado', 'nivel', 'buscando'],
   MARCADORES: ['id', 'retaId', 'matchId', 'a', 'b', 'porId', 'actualizado'],
   MULTAS: ['id', 'retaId', 'jugadorId', 'n'],
   SUSCRIPCIONES: ['id', 'jugadorId', 'endpoint', 'creado', 'ultimo'],
@@ -86,7 +86,9 @@ function api(token, accion, datos) {
       suscribir: function () { return suscribir_(yo, datos); },
       jugadoresAdmin: function () { return jugadoresAdmin_(yo); },
       resetPin: function () { return resetPin_(yo, datos); },
-      estadoJugador: function () { return estadoJugador_(yo, datos); }
+      estadoJugador: function () { return estadoJugador_(yo, datos); },
+      nivelJugador: function () { return nivelJugador_(yo, datos); },
+      faltaUno: function () { return faltaUno_(yo, datos); }
     };
     if (!acciones[accion]) throw new Error('Acción no válida.');
     return ok_(acciones[accion]());
@@ -315,7 +317,7 @@ function soloAdmin_(yo) { if (!esAdmin_(yo)) falla_('Solo el administrador puede
 /* ===================== Lectura ===================== */
 
 function publicoJugador_(j, yo) {
-  var o = { id: j.id, nombre: j.nombre, apellido: j.apellido, alias: j.alias, demo: !j.celular };
+  var o = { id: j.id, nombre: j.nombre, apellido: j.apellido, alias: j.alias, nivel: Number(j.nivel) || 0, demo: !j.celular };
   if (yo && (yo.id === j.id || esAdmin_(yo))) { o.celular = j.celular; o.rol = j.rol; o.estado = j.estado; }
   return o;
 }
@@ -353,7 +355,7 @@ function guardarPerfil_(yo, d) {
     var j = buscar_('JUGADORES', yo.id);
     var nombre = texto_(d.nombre, 40);
     if (!nombre) falla_('Escribe tu nombre.');
-    j.nombre = nombre; j.apellido = texto_(d.apellido, 40); j.alias = texto_(d.alias, 24); j.actualizado = ahora_();
+    j.nombre = nombre; j.apellido = texto_(d.apellido, 40); j.alias = texto_(d.alias, 24); if (d.nivel !== undefined) j.nivel = nivelValido_(d.nivel); j.actualizado = ahora_();
     guardar_('JUGADORES', j);
     return publicoJugador_(j, j);
   });
@@ -451,7 +453,7 @@ function crearReta_(yo, d) {
       maxJugadores: Math.max(4, Math.min(64, Number(d.maxJugadores) || 8)),
       tipo: d.tipo === 'fija' ? 'fija' : 'royal', puntos: Math.max(1, Math.min(99, Number(d.puntos) || 24)),
       modo: d.modo === 'meta' ? 'meta' : 'total', reglas: reglas, castigo: texto_(d.castigo, 24) || 'Castigos',
-      jugadores: [], partidos: [], creado: ahora_()
+      jugadores: [], partidos: [], creado: ahora_(), nivel: rangoValido_(d.nivel), buscando: ''
     };
     guardar_('RETAS', r);
     avisarNuevaReta_(yo, r);
@@ -480,6 +482,102 @@ function inscritos_(yo, d) {
     guardar_('RETAS', r);
     avisarInscritos_(yo, r, antes, nueva);
     return limpio_(r);
+  });
+}
+
+/* ===================== Niveles y "Me falta uno" ===================== */
+
+var NIVELES_ = ['', '1ra', '2da', '3ra', '4ta', '5ta', '6ta', 'Principiante'];
+function nivelValido_(n) { n = Math.round(Number(n) || 0); return n >= 1 && n <= 7 ? String(n) : ''; }
+function rangoValido_(t) {
+  var m = String(t || '').match(/^(\d)-(\d)$/);
+  if (!m) return '';
+  var a = Number(nivelValido_(m[1])), b = Number(nivelValido_(m[2]));
+  if (!a || !b) return '';
+  return Math.min(a, b) + '-' + Math.max(a, b);
+}
+function rangoTxt_(t) {
+  var m = String(t || '').split('-');
+  if (m.length !== 2) return '';
+  return m[0] === m[1] ? NIVELES_[Number(m[0])] : NIVELES_[Number(m[0])] + ' a ' + NIVELES_[Number(m[1])];
+}
+function nivelJugador_(yo, d) {
+  if (!esAdmin_(yo)) falla_('Solo el administrador puede cambiar el nivel de otros.');
+  return conCandado_(function () {
+    var j = buscar_('JUGADORES', d.id);
+    if (!j) falla_('No encontré a ese jugador.');
+    j.nivel = nivelValido_(d.nivel); j.actualizado = ahora_();
+    guardar_('JUGADORES', j);
+    return publicoJugador_(j, yo);
+  });
+}
+function minutos_(h) { var p = String(h || '').split(':'); return Number(p[0]) * 60 + Number(p[1] || 0); }
+
+/** Avisa a los jugadores más adecuados (nivel parecido y que suelen jugar a esa hora) que a la reta le faltan jugadores. */
+function faltaUno_(yo, d) {
+  return conCandado_(function () {
+    var r = reta_(d.retaId);
+    var ins = r.jugadores || [];
+    if (!(esAdmin_(yo) || r.creadorId === yo.id || ins.indexOf(yo.id) >= 0)) falla_('Solo quien está en la reta puede pedir jugadores.');
+    if ((r.partidos || []).length) falla_('Los partidos ya se sortearon.');
+    var faltan = Number(r.maxJugadores) - ins.length;
+    if (faltan <= 0) falla_('La reta ya está llena.');
+    var ahoraMx = Utilities.formatDate(new Date(), 'America/Mazatlan', "yyyy-MM-dd'T'HH:mm");
+    var inicio = r.fecha + 'T' + r.hora;
+    if (inicio < ahoraMx.slice(0, 10) + 'T00:00' || (r.fecha === ahoraMx.slice(0, 10) && minutos_(r.hora) + 30 < minutos_(ahoraMx.slice(11)))) falla_('Esta reta ya pasó.');
+    if (r.buscando) {
+      var mins = (new Date().getTime() - new Date(r.buscando).getTime()) / 60000;
+      if (mins < 30) falla_('Ya se avisó hace ' + Math.max(1, Math.round(mins)) + ' min. Puedes volver a avisar en ' + Math.ceil(30 - mins) + ' min.');
+    }
+
+    var jug = tabla_('JUGADORES'), nivelDe = {};
+    jug.forEach(function (j) { nivelDe[j.id] = Number(j.nivel) || 0; });
+    // Nivel buscado: el de la reta o el promedio de los inscritos.
+    var lo = 0, hi = 0, rg = String(r.nivel || '').split('-');
+    if (rg.length === 2) { lo = Number(rg[0]); hi = Number(rg[1]); }
+    else {
+      var ns = ins.map(function (x) { return nivelDe[x]; }).filter(Boolean);
+      if (ns.length) { var p = ns.reduce(function (a, b) { return a + b; }, 0) / ns.length; lo = Math.floor(p); hi = Math.ceil(p); }
+    }
+    // Afinidad: retas jugadas a una hora parecida y en el mismo club.
+    var hora = minutos_(r.hora), club = normTxt_(r.club), af = {};
+    tabla_('RETAS').forEach(function (x) {
+      if (x.id === r.id) return;
+      var ids = (x.jugadores || []).slice();
+      (x.partidos || []).forEach(function (f) { if (f && f.jugadorId) ids.push(f.jugadorId); });
+      var cerca = Math.abs(minutos_(x.hora) - hora) <= 90, mismo = normTxt_(x.club) === club;
+      var vistos = {};
+      ids.forEach(function (id) {
+        if (vistos[id]) return; vistos[id] = 1;
+        af[id] = (af[id] || 0) + (cerca ? 2 : 0) + (mismo ? 1 : 0) + 0.5;
+      });
+    });
+    var cand = jug.filter(function (j) { return j.celular && j.estado !== 'bloqueado' && j.id !== yo.id && ins.indexOf(j.id) < 0; })
+      .map(function (j) {
+        var n = nivelDe[j.id], dist = 0;
+        if (lo && n) dist = n < lo ? lo - n : (n > hi ? n - hi : 0);
+        else if (lo) dist = 0.75; // sin nivel: posible
+        return { id: j.id, dist: dist, af: af[j.id] || 0 };
+      });
+    cand.sort(function (a, b) { return (a.dist - b.dist) || (b.af - a.af); });
+    var buenos = cand.filter(function (c) { return c.dist <= 1; });
+    var para = buenos.slice(0, 25);
+    if (para.length < 8) para = para.concat(cand.filter(function (c) { return c.dist > 1; }).slice(0, 8 - para.length));
+    para = para.map(function (c) { return c.id; });
+
+    var texto = '🎾 ' + (faltan === 1 ? 'Falta 1' : 'Faltan ' + faltan) + ' en la reta de ' + retaCorta_(r) +
+      (r.nivel ? ' · Nivel ' + rangoTxt_(r.nivel) : '') + ' (' + ins.length + '/' + r.maxJugadores + '). ¿Te apuntas?';
+    if (para.length) {
+      var h = hoja_('AVISOS'), cols = HOJAS.AVISOS, ahora = ahora_();
+      var filas = para.map(function (id) { return { id: nuevoId_('a'), paraId: id, tipo: 'falta', texto: texto, retaId: r.id, deId: yo.id, creado: ahora, leido: '' }; });
+      var ini = h.getLastRow() + 1;
+      h.getRange(ini, 1, filas.length, cols.length).setNumberFormat('@').setValues(filas.map(function (o) { return cols.map(function (c) { return aCelda_(c, o[c]); }); }));
+      delete CACHE_TABLAS_.AVISOS;
+    }
+    r.buscando = ahora_();
+    guardar_('RETAS', r);
+    try { if (para.length) enviarPush_(para); } catch (e) { console.warn('push', e); }
+    return { avisados: para.length, reta: limpio_(r) };
   });
 }
 
@@ -518,7 +616,7 @@ function avisarNuevaReta_(yo, r) {
   if (dueno) avisar_(dueno, 'club', 'Nueva reta en tu club: ' + retaCorta_(r) + ' · ' + canchasTxt_(r) + ' · ' + nombreCorto_(yo.id) + ' organiza', r.id, yo.id);
   var para = tabla_('JUGADORES').filter(function (j) { return j.celular && j.estado !== 'bloqueado' && j.id !== yo.id && j.id !== dueno; }).map(function (j) { return j.id; });
   if (!para.length) return;
-  var texto = 'Nueva reta: ' + retaCorta_(r) + ' · ' + (r.tipo === 'fija' ? 'Pareja fija' : 'Royal') + ' · ' + r.maxJugadores + ' lugares. ¡Apúntate!';
+  var texto = 'Nueva reta: ' + retaCorta_(r) + ' · ' + (r.tipo === 'fija' ? 'Pareja fija' : 'Royal') + (r.nivel ? ' · Nivel ' + rangoTxt_(r.nivel) : '') + ' · ' + r.maxJugadores + ' lugares. ¡Apúntate!';
   var h = hoja_('AVISOS'), cols = HOJAS.AVISOS, ahora = ahora_();
   var filas = para.map(function (id) { return { id: nuevoId_('a'), paraId: id, tipo: 'nueva', texto: texto, retaId: r.id, deId: yo.id, creado: ahora, leido: '' }; });
   var ini = h.getLastRow() + 1;

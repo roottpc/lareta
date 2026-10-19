@@ -212,6 +212,17 @@ nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:re
 .btn.wa svg{width:20px;height:20px;flex:none}
 .preview{white-space:pre-wrap;font-size:14px;line-height:1.45;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;max-height:260px;overflow:auto;user-select:text}
 .chip.falta{background:transparent;border:1px solid var(--ball);color:var(--ball)}
+.chip.busca{background:#ff5a1f;color:#fff;animation:late 1.6s ease-in-out infinite}
+@keyframes late{50%{box-shadow:0 0 0 4px rgba(255,90,31,.25)}}
+.chip.nivel{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.nv{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:5px;border:1px solid var(--ball);color:var(--ball);font:700 10px/1.4 var(--f-body);letter-spacing:.04em;text-transform:uppercase;vertical-align:2px}
+.falta-box{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border-radius:14px;border:1px solid #ff5a1f;background:linear-gradient(120deg,rgba(255,90,31,.16),rgba(255,90,31,.04))}
+.falta-box .btn{flex:none}
+.sug{padding:10px 12px;border-radius:10px;background:var(--soft);font-size:13px}
+.pod-ov{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.86);display:grid;place-items:center;padding:16px;overflow:auto}
+.pod-box{display:flex;flex-direction:column;gap:12px;max-width:420px;width:100%}
+.pod-box a.btn{text-decoration:none}
+.pod-box img{width:100%;max-height:72vh;object-fit:contain;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.6),0 0 0 1px rgba(212,255,31,.3)}
 .hd-r{display:flex;align-items:center;gap:10px;min-width:0}
 .bell{position:relative;appearance:none;border:1px solid var(--line);background:transparent;color:var(--ink);width:42px;height:42px;border-radius:50%;display:grid;place-items:center;cursor:pointer;flex:none}
 .bell svg{width:22px;height:22px}
@@ -333,6 +344,13 @@ const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()
 const pname=id=>{const p=S.players[id];return p?(p.alias||p.nombre||"Sin nombre"):"—"};
 const pfull=id=>{const p=S.players[id];if(!p)return"";const f=[p.nombre,p.apellido].filter(Boolean).join(" ");return f===pname(id)?"":f};
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const NIVELES=["","1ra","2da","3ra","4ta","5ta","6ta","Principiante"];
+const nivelDe=id=>+(S.players[id]||{}).nivel||0;
+const nvTag=id=>{const n=nivelDe(id);return n?`<span class="nv">${NIVELES[n]}</span>`:""};
+const rangoTxt=t=>{const m=String(t||"").split("-");if(m.length!==2)return"";return m[0]===m[1]?NIVELES[+m[0]]:NIVELES[+m[0]]+" a "+NIVELES[+m[1]]};
+const RANGOS=[["","Abierta: todos los niveles"],...[1,2,3,4,5,6,7].map(n=>[n+"-"+n,"Solo "+NIVELES[n]]),...[1,2,3,4,5,6].map(n=>[n+"-"+(n+1),NIVELES[n]+" y "+NIVELES[n+1]])];
+const buscandoAhora=r=>r.buscando&&Date.now()-new Date(r.buscando).getTime()<3*3600e3&&!(r.partidos||[]).length&&(r.jugadores||[]).length<r.maxJugadores;
+const retaPasada=r=>{const d=new Date((r.fecha||"")+"T"+(r.hora||"00:00"));return!isNaN(d)&&d.getTime()+30*60000<Date.now()};
 const fmtDate=f=>{if(!f)return"";const d=new Date(f+"T12:00");return d.toLocaleDateString("es-MX",{weekday:"short",day:"numeric",month:"short"})};
 const fmtHora=h=>{if(!h)return"";const[H,M]=h.split(":").map(Number);const ap=H>=12?"pm":"am";return((H%12)||12)+":"+String(M).padStart(2,"0")+" "+ap};
 const scoreKey=(rid,mid)=>rid+"__"+mid;
@@ -493,7 +511,7 @@ function retaCard([id,r]){
     <div class="row between"><span class="when">${esc(fmtDate(r.fecha))} · ${esc(fmtHora(r.hora))}</span><span class="chip ${st.cls}">${esc(st.label)}</span></div>
     <div class="row between" style="margin-top:4px"><span style="font-weight:600">${esc(clubName(r))}</span>
     <span class="muted small">${r.tipo==="fija"?"Pareja fija":"Royal"} · ${n}/${r.maxJugadores||"∞"} jugadores · ${r.canchas} cancha${r.canchas>1?"s":""}</span></div>
-    ${!(r.partidos||[]).length&&r.maxJugadores>n?`<div class="row" style="margin-top:8px"><span class="chip falta">${r.maxJugadores-n===1?"Falta 1 lugar":"Faltan "+(r.maxJugadores-n)+" lugares"}</span>${S.uid&&(r.jugadores||[]).includes(S.uid)?`<span class="chip">Ya estás apuntado</span>`:""}</div>`:""}</button>`;
+    ${!(r.partidos||[]).length&&r.maxJugadores>n?`<div class="row" style="margin-top:8px">${buscandoAhora(r)?`<span class="chip busca">📣 Buscan jugador</span>`:""}<span class="chip falta">${r.maxJugadores-n===1?"Falta 1 lugar":"Faltan "+(r.maxJugadores-n)+" lugares"}</span>${r.nivel?`<span class="chip nivel">Nivel ${esc(rangoTxt(r.nivel))}</span>`:""}${S.uid&&(r.jugadores||[]).includes(S.uid)?`<span class="chip">Ya estás apuntado</span>`:""}</div>`:""}</button>`;
 }
 function vRetas(){
   const all=Object.entries(S.retas).sort(retaOrder);
@@ -510,7 +528,7 @@ function vRetas(){
 }
 
 function knownClubs(){const s=new Set(Object.values(S.clubs).map(c=>c.nombre));Object.values(S.retas).forEach(r=>{if(r.club)s.add(r.club)});return[...s].filter(Boolean).sort()}
-function newDraft(){const last=Object.entries(S.retas).sort(retaOrder)[0];return{clubTexto:last?clubName(last[1]):"",fecha:today(),hora:"19:00",canchas:2,maxJugadores:8,tipo:"royal",puntos:24,modo:"total",reglas:PRESET_RULES.slice(0,2),castigo:"Ballenas",extra:""}}
+function newDraft(){const last=Object.entries(S.retas).sort(retaOrder)[0];return{clubTexto:last?clubName(last[1]):"",fecha:today(),hora:"19:00",canchas:2,maxJugadores:8,tipo:"royal",puntos:24,modo:"total",reglas:PRESET_RULES.slice(0,2),castigo:"Ballenas",extra:"",nivel:""}}
 function vNueva(){
   const d=S.draft||(S.draft=newDraft());
   const custom=d.reglas.filter(r=>!PRESET_RULES.includes(r));
@@ -524,6 +542,8 @@ function vNueva(){
       <div class="field"><label class="label" for="r-hora">Hora</label><input id="r-hora" type="time" name="hora" value="${esc(d.hora)}" required></div></div>
       <div class="grid2"><div class="field"><label class="label" for="r-canchas">Canchas</label><input id="r-canchas" type="number" min="1" max="12" name="canchas" value="${d.canchas}"></div>
       <div class="field"><label class="label" for="r-max">Máx. jugadores</label><input id="r-max" type="number" min="4" max="64" name="maxJugadores" value="${d.maxJugadores}"></div></div>
+      <div class="field"><label class="label" for="r-nivel">Nivel de la reta</label><select id="r-nivel" name="nivel">${RANGOS.map(([v,l])=>`<option value="${v}" ${(d.nivel||"")===v?"selected":""}>${l}</option>`).join("")}</select></div>
+      <p class="muted small" style="margin:0">Si falta gente, la app avisa primero a los jugadores de este nivel.</p>
     </div>
     <div class="panel stack">
       <span class="label">Tipo de juego</span>
@@ -558,6 +578,7 @@ function vHist(id,r){
   <h2>Tabla</h2><div class="panel tbl-wrap"><table><thead><tr><th>#</th><th>Jugador</th>${Array.from({length:nP},(_,i)=>`<th>P${i+1}</th>`).join("")}<th>Total</th></tr></thead><tbody>
   ${filas.map((f,i)=>{if(f.total!==prev){pos=i+1;prev=f.total}return`<tr class="${pos===1?"first":""}"><td class="pos">${pos}</td><td><b>${esc(pname(f.jugadorId))}</b></td>${Array.from({length:nP},(_,k)=>{const v=(f.sets||[])[k];return`<td>${v==null?"<span class=muted>–</span>":v}</td>`}).join("")}<td class="elo">${f.total}</td></tr>`}).join("")}
   </tbody></table></div>
+  ${filas.length?`<button class="btn ball" data-act="podio">📸 Compartir podio</button>`:""}
   ${C?(S.confirm==="reta"?`<div class="panel row between"><span>¿Borrar esta reta histórica?</span><span class="row"><button class="btn" data-act="cancel">No</button><button class="btn danger" data-act="delReta">Sí, borrar</button></span></div>`:`<div><button class="btn danger sm" data-act="ask" data-what="reta">Borrar reta</button></div>`):""}
   </div>`;
 }
@@ -573,7 +594,7 @@ function vReta(){
   <div class="panel stack"><div class="row between"><span class="chip ${st.cls}">${esc(st.label)}</span><span class="muted small">${fija?"Pareja fija":"Royal"}</span></div>
     <h1>${clubPorNombre(clubName(r))?`<button class="linkclub" data-act="verClub" data-id="${esc(clubPorNombre(clubName(r)).id)}">${esc(clubName(r))}</button>`:esc(clubName(r))}</h1>
     <div class="row" style="font-family:var(--f-display);font-size:20px;font-weight:700;text-transform:uppercase">${esc(fmtDate(r.fecha))} · ${esc(fmtHora(r.hora))}</div>
-    <div class="row"><span class="chip">${r.canchas} cancha${r.canchas>1?"s":""}</span><span class="chip">${ins.length}/${r.maxJugadores} jugadores</span><span class="chip">${r.modo==="total"?`${r.puntos} puntos totales`:`A ${r.puntos} puntos`}</span></div>
+    <div class="row"><span class="chip">${r.canchas} cancha${r.canchas>1?"s":""}</span><span class="chip">${ins.length}/${r.maxJugadores} jugadores</span><span class="chip">${r.modo==="total"?`${r.puntos} puntos totales`:`A ${r.puntos} puntos`}</span>${r.nivel?`<span class="chip nivel">Nivel ${esc(rangoTxt(r.nivel))}</span>`:""}</div>
     ${(r.reglas||[]).length?`<div><span class="label">Reglas</span><ul class="rules">${r.reglas.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
     <button class="btn wa" data-act="compartir">${WA_SVG}Compartir reta</button>
   </div>
@@ -595,7 +616,11 @@ function vReta(){
       ${solo?`<p class="muted small" style="margin:0">${esc(pname(solo))} no tiene pareja todavía.</p>`:""}
       ${W&&!ps.length&&ins.length>=4?`<button class="btn" data-act="mixPairs">Sortear parejas</button>`:""}</div>`;
   }else{
-    h+=`<div class="panel"><div class="row">${ins.map(pid=>`<span class="chip">${esc(pname(pid))}</span>`).join("")}</div></div>`;
+    h+=`<div class="panel"><div class="row">${ins.map(pid=>`<span class="chip">${esc(pname(pid))}${nvTag(pid)}</span>`).join("")}</div></div>`;
+  }
+  const faltan=r.maxJugadores-ins.length;
+  if(S.uid&&(C||meIn)&&!ps.length&&faltan>0&&!retaPasada(r)){
+    h+=`<div class="falta-box"><div><b>¿${faltan===1?"Te falta 1":"Te faltan "+faltan}?</b><div class="muted small">La app avisa a los jugadores ${r.nivel?"de nivel "+esc(rangoTxt(r.nivel)):"de nivel parecido"} que suelen jugar a esta hora.${r.buscando?` Último aviso ${esc(haceCuanto(r.buscando))}.`:""}</div></div><button class="btn ball" data-act="faltaUno">📣 Avisar</button></div>`;
   }
   if(W&&!ps.length){
     const ok=fija?(ins.length>=4&&ins.length%2===0):ins.length>=4;
@@ -628,6 +653,7 @@ function vReta(){
     h+=`<h2>Tabla de la reta</h2>${oficial()?.premio?`<div class="premio">Premio al primer lugar: ${esc(oficial().premio)}, cortesía de ${esc(oficial().nombre)}</div>`:""}<div class="panel tbl-wrap"><table><thead><tr><th>#</th><th>${fija?"Pareja":"Jugador"}</th><th>PJ</th><th>PG</th><th>Pts</th><th>Prom</th><th>Dif</th></tr></thead><tbody>
       ${tb.map((x,i)=>`<tr class="${i===0&&x.pj?"first":""}"><td class="pos">${i+1}</td><td>${x.ids.map(p=>esc(pname(p))).join(" / ")}</td><td>${x.pj}</td><td>${x.pg}</td><td>${x.pf}</td><td>${x.pj?(x.pf/x.pj).toFixed(1):"–"}</td><td class="${x.pf-x.pc>0?"up":x.pf-x.pc<0?"down":""}">${x.pf-x.pc>0?"+":""}${x.pf-x.pc}</td></tr>`).join("")}
     </tbody></table>${(r.reglas||[]).some(x=>/primer lugar/i.test(x))&&st.label==="Terminada"&&tb[0]?`<p class="small" style="margin:10px 0 0"><b>${tb[0].ids.map(p=>esc(pname(p))).join(" y ")}</b> no paga cancha.</p>`:""}</div>`;
+    if(anyScore)h+=`<button class="btn ball" data-act="podio">📸 Compartir podio</button>`;
   }
   if(ins.length){
     h+=`<h2>${esc(r.castigo||"Castigos")}</h2><div class="panel">${ins.map(pid=>{const n=(S.multas[scoreKey(id,pid)]||{}).n||0;
@@ -911,6 +937,79 @@ function vClub(){
   <div class="guardar-bar"><button type="button" class="btn primary" style="width:100%" data-act="guardarClub">${c?"Guardar cambios":"Registrar club"}</button></div></div>`;
 }
 
+/* ---------- imagen del podio ---------- */
+function normTxt(t){return String(t||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim()}
+function svgImg(svg){return new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg.includes("xmlns")?svg:svg.replace("<svg",'<svg xmlns="http://www.w3.org/2000/svg"'))})}
+async function podioCanvas(id,r){
+  try{await Promise.all(['800 100px "Barlow Condensed"','700 40px "Barlow Condensed"','600 30px "Barlow"','500 30px "Barlow"'].map(f=>document.fonts.load(f)))}catch(e){}
+  const W=1080,H=1920,cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
+  const LIME="#d4ff1f",DC='"Barlow Condensed","Arial Narrow",sans-serif',BD='"Barlow",system-ui,sans-serif';
+  const font=(w,s,f)=>x.font=`${w} ${s}px ${f}`;
+  const ls=v=>{if("letterSpacing" in x)x.letterSpacing=v+"px"};
+  const fit=(t,maxW,size,w,f)=>{let s=size;font(w,s,f);while(x.measureText(t).width>maxW&&s>18){s-=2;font(w,s,f)}return s};
+  const rr=(X,Y,w,h,rad)=>{x.beginPath();x.roundRect?x.roundRect(X,Y,w,h,rad):x.rect(X,Y,w,h)};
+  let rows;
+  if(esHist(r))rows=(r.partidos||[]).filter(f=>f&&f.jugadorId).sort((a,b)=>(b.total||0)-(a.total||0)).map(f=>({ids:[f.jugadorId],pts:+f.total||0,pg:null}));
+  else rows=retaTable(id,r).filter(t=>t.pj).map(t=>({ids:t.ids,pts:t.pf,pg:t.pg,dif:t.pf-t.pc}));
+  const nm=ids=>ids.map(pname).join(" / ");
+  // fondo
+  x.fillStyle="#050607";x.fillRect(0,0,W,H);
+  let g=x.createRadialGradient(W/2,560,40,W/2,560,820);g.addColorStop(0,"rgba(212,255,31,.20)");g.addColorStop(1,"rgba(212,255,31,0)");x.fillStyle=g;x.fillRect(0,0,W,H);
+  x.save();x.strokeStyle="rgba(255,255,255,.06)";x.lineWidth=4;x.strokeRect(70,400,W-140,1200);x.beginPath();x.moveTo(70,1000);x.lineTo(W-70,1000);x.moveTo(W/2,400);x.lineTo(W/2,1600);x.stroke();x.restore();
+  // encabezado
+  x.textAlign="center";x.textBaseline="alphabetic";
+  x.shadowColor="rgba(212,255,31,.7)";x.shadowBlur=30;x.fillStyle=LIME;font(800,120,DC);ls(6);x.fillText("LA RETA",W/2,170);x.shadowBlur=0;
+  x.fillStyle="#fff";font(600,30,BD);ls(14);x.fillText("RESULTADOS",W/2,222);ls(0);
+  const club=clubName(r).toUpperCase();fit(club,W-120,78,800,DC);x.fillStyle="#fff";x.fillText(club,W/2,318);
+  font(700,42,DC);ls(2);x.fillStyle=LIME;x.fillText((fmtDate(r.fecha)+(r.hora?" · "+fmtHora(r.hora):"")).toUpperCase(),W/2,372);ls(0);
+  // podio
+  const base=930,cols=[{i:1,cx:225,h:230,c:["#f1f4f8","#9aa3ad"]},{i:0,cx:540,h:320,c:["#ffe066","#c8920e"]},{i:2,cx:855,h:180,c:["#f0b27a","#9c5a2b"]}];
+  for(const k of cols){const row=rows[k.i];const bw=280,X=k.cx-bw/2,Y=base+180-k.h;
+    g=x.createLinearGradient(0,Y,0,Y+k.h);g.addColorStop(0,k.c[0]);g.addColorStop(1,k.c[1]);x.fillStyle=g;rr(X,Y,bw,k.h,[18,18,0,0]);x.fill();
+    x.fillStyle="rgba(0,0,0,.55)";font(800,k.i===0?150:120,DC);x.fillText(String(k.i+1),k.cx,Y+(k.i===0?160:128));
+    if(!row)continue;
+    const R=k.i===0?82:66,cy=Y-R-130;
+    x.save();x.beginPath();x.arc(k.cx,cy,R+8,0,Math.PI*2);x.fillStyle=k.c[0];x.shadowColor=k.c[0];x.shadowBlur=k.i===0?40:18;x.fill();x.restore();
+    const PAL=["#1b56ad","#c2410c","#2e7d32","#6a1b9a","#00838f","#ad1457","#4e342e"];x.beginPath();x.arc(k.cx,cy,R,0,Math.PI*2);x.fillStyle=PAL[hashStr(row.ids.join("|"))%PAL.length];x.fill();
+    const ini=row.ids.map(p=>initials(pname(p)).slice(0,row.ids.length>1?1:2)).join("");x.fillStyle="#fff";font(800,R*(ini.length>2?.62:.8),DC);x.textBaseline="middle";x.fillText(ini,k.cx,cy+4);x.textBaseline="alphabetic";
+    if(k.i===0){x.fillStyle="#ffe066";x.beginPath();const cx=k.cx,top=cy-R-74;x.moveTo(cx-58,top+60);x.lineTo(cx-66,top+8);x.lineTo(cx-30,top+34);x.lineTo(cx,top-6);x.lineTo(cx+30,top+34);x.lineTo(cx+66,top+8);x.lineTo(cx+58,top+60);x.closePath();x.fill()}
+    x.fillStyle="#fff";const n1=nm(row.ids);
+    if(row.ids.length>1){row.ids.forEach((p,j)=>{fit(pname(p),bw+30,40,700,DC);x.fillText(pname(p),k.cx,Y-82+j*42)})}
+    else{fit(n1,bw+30,k.i===0?54:46,800,DC);x.fillText(n1,k.cx,Y-62)}
+    x.fillStyle=LIME;font(800,34,DC);x.fillText(row.pts+" PTS"+(row.pg!=null?" · "+row.pg+" G":""),k.cx,Y-18);
+  }
+  // tabla del resto
+  let y=1185;const resto=rows.slice(3),max=7;
+  if(resto.length){x.textAlign="left";
+    resto.slice(0,max).forEach((row,j)=>{const Y=y+j*58;
+      x.fillStyle=j%2?"rgba(255,255,255,.03)":"rgba(255,255,255,.07)";rr(110,Y-40,W-220,52,10);x.fill();
+      x.fillStyle="rgba(255,255,255,.55)";font(800,34,DC);x.fillText(String(j+4),135,Y);
+      x.fillStyle="#fff";fit(nm(row.ids),560,34,700,DC);x.fillText(nm(row.ids),205,Y);
+      x.textAlign="right";x.fillStyle=LIME;font(800,34,DC);x.fillText(row.pts+" pts",W-135,Y);x.textAlign="left"});
+    if(resto.length>max){x.fillStyle="rgba(255,255,255,.6)";font(500,28,BD);x.textAlign="center";x.fillText("y "+(resto.length-max)+" más",W/2,y+max*58+6)}
+  }
+  x.textAlign="center";
+  // pie: patrocinador oficial y liga
+  const of=oficial();let fy=1720;
+  if(of){x.fillStyle="rgba(255,255,255,.6)";font(600,24,BD);ls(6);x.fillText("PRESENTADO POR",W/2,fy-70);ls(0);
+    const im=await svgImg(logoSVG(of,64));font(800,46,DC);const tw=x.measureText(of.nombre.toUpperCase()).width,tot=64+18+tw,sx=W/2-tot/2;
+    if(im)x.drawImage(im,sx,fy-58,64,64);x.textAlign="left";x.fillStyle="#fff";x.fillText(of.nombre.toUpperCase(),sx+82,fy-10);x.textAlign="center";fy+=40}
+  x.fillStyle=LIME;rr(W/2-290,fy+20,580,74,37);x.fill();x.fillStyle="#0a0d00";font(800,36,DC);ls(2);x.fillText("ARMA TU RETA EN LA RETA",W/2,fy+70);ls(0);
+  x.fillStyle="rgba(255,255,255,.7)";font(500,26,BD);x.fillText(APP_URL.replace(/^https:\/\//,"").replace(/\/$/,""),W/2,fy+130);
+  return cv;
+}
+function mostrarPodio(blob,nombre,r){
+  const url=URL.createObjectURL(blob);const file=new File([blob],nombre,{type:"image/png"});
+  const puede=!!(navigator.canShare&&navigator.canShare({files:[file]}));
+  const d=document.createElement("div");d.className="pod-ov";d.setAttribute("role","dialog");d.setAttribute("aria-label","Imagen del podio");
+  d.innerHTML=`<div class="pod-box"><img src="${url}" alt="Podio de la reta"><div class="row" style="justify-content:center;gap:8px">${puede?`<button class="btn ball" data-p="share">Compartir</button>`:""}<a class="btn ${puede?"":"ball"}" href="${url}" download="${esc(nombre)}">Descargar</a><button class="btn ghost" data-p="x">Cerrar</button></div>
+    <p class="muted small" style="margin:0;text-align:center">Súbela a tu estado de WhatsApp o a tus historias de Instagram.</p></div>`;
+  d.addEventListener("click",async e=>{const b=e.target.closest("[data-p]");
+    if(e.target===d||(b&&b.dataset.p==="x")){d.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);return}
+    if(b&&b.dataset.p==="share"){try{await navigator.share({files:[file],text:"Resultados de la reta en "+clubName(r)+" 🎾 "+APP_URL})}catch(er){}}});
+  document.body.appendChild(d);
+}
+
 function vWelcome(){
   const nP=Object.keys(S.players).length,nR=Object.keys(S.retas).length,nC=Object.keys(S.clubs).length;const of=oficial();
   return`<div class="wel"><div><p class="big">Bienvenido</p><p class="muted" style="margin:6px 0 0">Retas, marcadores y ranking del pádel en Tepic. ${nP} jugadores, ${nC} clubs y ${nR} retas registradas.</p></div>
@@ -947,11 +1046,18 @@ function vPerfil(){
   ${st?`<div class="panel row between"><div><span class="label">Rating</span><div class="elo" style="font-size:34px">${Math.round(st.elo)}</div></div>
     <div><span class="label">Lugar</span><div class="elo" style="font-size:34px">${pos}°</div></div>
     <div><span class="label">Récord</span><div class="elo" style="font-size:34px">${st.pg}-${st.pp}</div></div></div>`:""}
+  ${(()=>{const n=+p.nivel||0;let t="";
+    if(!n)t="Elige tu categoría para que te lleguen las retas de tu nivel.";
+    else if(st&&st.pj>=8&&st.elo>=1080&&n>1)t=`Tu rating va muy arriba (${Math.round(st.elo)}). Podrías subir a <b>${NIVELES[n-1]}</b>.`;
+    else if(st&&st.pj>=8&&st.elo<=920&&n<7)t=`Tu rating va abajo (${Math.round(st.elo)}). Quizá te conviene <b>${NIVELES[n+1]}</b> para jugar más parejo.`;
+    return t?`<div class="sug">💡 ${t}</div>`:""})()}
   <form class="panel stack" data-form="perfil">
     <div class="grid2"><div class="field"><label class="label" for="p-nom">Nombre</label><input id="p-nom" name="nombre" required value="${esc(p.nombre)}"></div>
     <div class="field"><label class="label" for="p-ape">Apellido</label><input id="p-ape" name="apellido" value="${esc(p.apellido)}"></div></div>
     <div class="grid2"><div class="field"><label class="label" for="p-ali">Alias</label><input id="p-ali" name="alias" value="${esc(p.alias)}" placeholder="Como te dicen en la cancha"></div>
     <div class="field"><span class="label">Celular</span><div class="tel" style="padding:10px 0">${esc(p.celular||"")}</div></div></div>
+    <div class="field"><label class="label" for="p-niv">Mi categoría</label><select id="p-niv" name="nivel"><option value="0">Sin elegir</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${+p.nivel===n?"selected":""}>${NIVELES[n]}</option>`).join("")}</select>
+      <div class="muted small" style="margin-top:4px">Sirve para que te avisen de retas de tu nivel cuando le falte gente. 1ra es el nivel más alto.</div></div>
     <button class="btn primary" type="submit">Guardar perfil</button></form>
   ${S.showPin?`<form class="panel stack" data-form="pin"><h3>Cambiar PIN</h3>
     <div class="grid3"><div class="field"><label class="label" for="k-a">PIN actual</label><input id="k-a" name="actual" type="password" inputmode="numeric" maxlength="6" required></div>
@@ -971,7 +1077,7 @@ function vCuentas(){
   return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="perfil">← Mi perfil</button></div><h1>Cuentas</h1>
   ${S.pinNuevo?`<div class="presented"><div><span class="label">PIN nuevo de ${esc(pname(S.pinNuevo.id))}</span><div class="elo tel" style="font-size:34px;letter-spacing:.2em">${esc(S.pinNuevo.pin)}</div><div class="muted small">Díselo en persona o por mensaje. Ya no se puede volver a ver.</div></div><button class="btn sm" data-act="pinOk">Listo</button></div>`:""}
   ${!l?`<div class="panel empty"><strong>Cargando</strong></div>`:`<div class="panel">${l.map(j=>`<div class="sp-row"><div class="who"><div class="alias">${esc(j.alias||j.nombre)}</div><div class="muted small">${esc([j.nombre,j.apellido].filter(Boolean).join(" "))} · <span class="tel">${esc(j.celular)}</span>${j.rol==="ADMIN"?" · Admin":""}${j.estado==="bloqueado"?` · <span style="color:var(--bad)">Bloqueado</span>`:""}</div></div>
-    <div class="row" style="gap:6px">${j.rol!=="ADMIN"?`<button class="btn sm" data-act="resetPin" data-id="${esc(j.id)}">PIN nuevo</button><button class="btn sm ${j.estado==="bloqueado"?"":"danger"}" data-act="bloquear" data-id="${esc(j.id)}" data-e="${j.estado==="bloqueado"?"activo":"bloqueado"}">${j.estado==="bloqueado"?"Desbloquear":"Bloquear"}</button>`:""}</div></div>`).join("")||`<p class="muted" style="margin:0">Nadie se ha registrado todavía.</p>`}</div>`}</div>`;
+    <div class="row" style="gap:6px"><select class="sm" data-act="nivelAdm" data-id="${esc(j.id)}" aria-label="Categoría de ${esc(j.alias||j.nombre)}" style="width:auto;padding:6px 8px"><option value="0">Sin nivel</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${nivelDe(j.id)===n?"selected":""}>${NIVELES[n]}</option>`).join("")}</select>${j.rol!=="ADMIN"?`<button class="btn sm" data-act="resetPin" data-id="${esc(j.id)}">PIN nuevo</button><button class="btn sm ${j.estado==="bloqueado"?"":"danger"}" data-act="bloquear" data-id="${esc(j.id)}" data-e="${j.estado==="bloqueado"?"activo":"bloqueado"}">${j.estado==="bloqueado"?"Desbloquear":"Bloquear"}</button>`:""}</div></div>`).join("")||`<p class="muted" style="margin:0">Nadie se ha registrado todavía.</p>`}</div>`}</div>`;
 }
 function vPatros(){
   if(!S.isOwner)return`<div class="panel empty"><strong>Solo el administrador</strong>Esta sección la maneja el dueño de la app.</div>`;
@@ -1022,7 +1128,7 @@ function vRanking(){
   ${rows.map(([id,x],i)=>{const v=val(x);if(v!==prev){pos=i+1;prev=v}const g=hi>lo?(v-lo)/(hi-lo):1;
     const celdas=modo==="sets"?`<td class="elo">${x.sets}</td><td>${x.retas}</td><td>${Math.round(x.elo)}</td>`
       :`<td class="elo">${Math.round(x.elo)}</td><td>${x.pj}</td><td>${x.pg}</td><td>${x.pj?Math.round(x.pg/x.pj*100):0}</td><td class="${x.pf-x.pc>0?"up":x.pf-x.pc<0?"down":""}">${x.pf-x.pc>0?"+":""}${x.pf-x.pc}</td><td class="muted small">${trend(x.last)}</td><td>${x.sets}</td>`;
-    return`<tr class="${pos<=3?"top":""}${id===S.uid?" yo":""}" style="--g:${g.toFixed(3)}"><td class="pos ${pos<=3?"m"+pos:""}">${pos}</td><td class="nm"><b>${esc(pname(id))}</b><div class="muted small">${esc(pfull(id))}</div></td>${celdas}</tr>`}).join("")}
+    return`<tr class="${pos<=3?"top":""}${id===S.uid?" yo":""}" style="--g:${g.toFixed(3)}"><td class="pos ${pos<=3?"m"+pos:""}">${pos}</td><td class="nm"><b>${esc(pname(id))}</b>${nvTag(id)}<div class="muted small">${esc(pfull(id))}</div></td>${celdas}</tr>`}).join("")}
   </tbody></table></div>`:`<div class="panel empty"><strong>Aún sin partidos</strong>El ranking se arma solo en cuanto se capturen marcadores en las retas.</div>`}</div>`;
 }
 
@@ -1078,7 +1184,7 @@ async function act(accion,datos,msg){
 function readDraft(form){const d=S.draft;const f=new FormData(form);
   d.clubTexto=f.get("clubTexto")||"";
   d.fecha=f.get("fecha");d.hora=f.get("hora");d.canchas=Math.max(1,+f.get("canchas")||1);d.maxJugadores=Math.max(4,+f.get("maxJugadores")||4);
-  d.tipo=f.get("tipo");d.modo=f.get("modo");d.puntos=Math.max(1,+f.get("puntos")||1);d.castigo=f.get("castigo");d.extra=f.get("extra");
+  d.tipo=f.get("tipo");d.modo=f.get("modo");d.nivel=f.get("nivel")||"";d.puntos=Math.max(1,+f.get("puntos")||1);d.castigo=f.get("castigo");d.extra=f.get("extra");
   const presets=f.getAll("preset").map(i=>PRESET_RULES[+i]);d.reglas=[...presets,...d.reglas.filter(r=>!PRESET_RULES.includes(r))];}
 function setIns(r,lista,msg){S.retas[r.id]={...r,jugadores:lista};S.keepScroll=true;render();return act("inscritos",{retaId:r.id,jugadores:lista},msg)}
 
@@ -1140,7 +1246,11 @@ document.addEventListener("click",async e=>{
   if(a==="logout"){try{await call("salir")}catch(er){}setTok("");S.uid=null;S.yo=null;S.isOwner=false;S.canWrite=false;S.welcomed=false;S.version="";go("inicio");return refresh(true)}
   if(a==="resetPin"){const id=t.dataset.id;const r=await act("resetPin",{jugadorId:id});if(r){S.pinNuevo={id,pin:r.pin};S.cuentas=await call("jugadoresAdmin").catch(()=>S.cuentas);render();window.scrollTo(0,0)}return}
   if(a==="bloquear"){await act("estadoJugador",{jugadorId:t.dataset.id,estado:t.dataset.e},t.dataset.e==="bloqueado"?"Cuenta bloqueada":"Cuenta activa");S.cuentas=await call("jugadoresAdmin").catch(()=>S.cuentas);return render()}
+  if(a==="podio"){const r0=S.retas[S.retaId];if(!r0)return;flash("Armando la imagen…");
+    try{const c=await podioCanvas(S.retaId,r0);const blob=await new Promise(res=>c.toBlob(res,"image/png"));mostrarPodio(blob,"podio-"+normTxt(clubName(r0)).replace(/[^a-z0-9]+/g,"-")+"-"+r0.fecha+".png",r0)}catch(er){console.warn(er);flash("No se pudo armar la imagen.")}return}
   const rid=S.retaId,r=S.retas[rid];if(!r||!S.uid)return;
+  if(a==="faltaUno"){t.disabled=true;try{const x=await call("faltaUno",{retaId:rid});S.retas[rid]=x.reta;S.version="";
+      flash(x.avisados?`Listo: avisé a ${x.avisados} jugador${x.avisados>1?"es":""} de tu nivel.`:"No encontré más jugadores a quién avisar.")}catch(er){flash(er.message)}S.keepScroll=true;return render()}
   if(a==="join"||a==="leave"){let ins=(r.jugadores||[]).filter(x=>x!==S.uid);if(a==="join"){if(ins.length>=r.maxJugadores)return flash("La reta ya está llena.");ins.push(S.uid)}
     return setIns(r,ins,a==="join"?"Quedaste apuntado":"Te saliste de la reta")}
   if(a==="swap"){const ins=r.jugadores.slice();const i=+t.dataset.i;const full=ins.length-(ins.length%2);const k=(i+2)%full;[ins[i],ins[k]]=[ins[k],ins[i]];return setIns(r,ins)}
@@ -1166,6 +1276,7 @@ document.addEventListener("change",e=>{
       call("subirImagen",{tipo:f.type,base64:b64}).then(r=>{S.sponImg=r.imagenId;S.keepScroll=true;document.activeElement?.blur();render();flash("Imagen lista. Guarda para aplicarla.")}).catch(er=>flash(er.message))};
     rd.readAsDataURL(f);return}
   const sf=t.closest("form[data-form='spon']");if(sf){const svg=sf.querySelector("svg");if(svg){const fd=new FormData(sf);svg.outerHTML=logoSVG({nombre:fd.get("nombre"),siglas:fd.get("siglas"),forma:fd.get("forma"),color:fd.get("color"),tinta:fd.get("tinta")},56)}return}
+  if(t.dataset.act==="nivelAdm"){const id=t.dataset.id,n=+t.value;t.blur();call("nivelJugador",{id,nivel:n}).then(j=>{if(S.players[id])S.players[id].nivel=j.nivel;flash("Categoría guardada")}).catch(er=>flash(er.message));return}
   if(t.dataset.act==="rondasSel"){S.rondasSel=+t.value;S.keepScroll=true;t.blur();return render()}
   if(t.dataset.act==="rkModo"){S.rkModo=t.value;try{localStorage.setItem("lareta_rk",t.value)}catch(er){}S.keepScroll=true;t.blur();return render()}
   const a=t.dataset.act;const rid=S.retaId,r=S.retas[rid];if(!r||!S.uid)return;
@@ -1192,7 +1303,7 @@ document.addEventListener("submit",async e=>{
     if(!/^\d{6}$/.test(pin))return flash("El PIN debe ser de 6 números.");if(pin!==g("pin2"))return flash("Los dos PIN no coinciden.");
     try{const r=await call("registro",{nombre:g("nombre"),apellido:g("apellido"),alias:g("alias"),celular:cel,pin});setTok(r.token);S.welcomed=true;S.version="";await refresh(true);
       const next=S.afterReg==="club"?"club":"retas";S.afterReg=null;if(next==="retas"&&S.volverReta&&S.retas[S.volverReta]){go("reta",{retaId:S.volverReta});S.volverReta=null}else go(next);activarPush(false);flash(r.yo.rol==="ADMIN"?"Cuenta creada. Eres el administrador.":"¡Listo! Ya estás registrado.")}catch(er){flash(er.message)}return}
-  if(kind==="perfil"){if(!g("nombre"))return flash("Escribe tu nombre.");return act("perfil",{nombre:g("nombre"),apellido:g("apellido"),alias:g("alias")},"Perfil guardado")}
+  if(kind==="perfil"){if(!g("nombre"))return flash("Escribe tu nombre.");return act("perfil",{nombre:g("nombre"),apellido:g("apellido"),alias:g("alias"),nivel:+fd.get("nivel")||0},"Perfil guardado")}
   if(kind==="pin"){if(!/^\d{6}$/.test(g("nuevo")))return flash("El PIN nuevo debe ser de 6 números.");if(g("nuevo")!==g("nuevo2"))return flash("Los PIN nuevos no coinciden.");
     const r=await act("cambiarPin",{actual:g("actual"),nuevo:g("nuevo")});if(r){S.showPin=false;render();flash("PIN cambiado")}return}
   if(kind==="club"){if(!g("nombre"))return flash("Escribe el nombre del club.");
@@ -1204,7 +1315,7 @@ document.addEventListener("submit",async e=>{
     if(!data.nombre)return flash("Escribe el nombre de la marca.");
     const r=await act("patrocinador",data,"Patrocinador guardado");if(r){S.editSpon=null;S.sponImg=undefined;render()}return}
   if(kind==="reta"){readDraft(f);const d=S.draft;if(!d.clubTexto.trim())return flash("Escribe el club.");
-    const r=await act("crearReta",{club:d.clubTexto.trim(),fecha:d.fecha,hora:d.hora,canchas:d.canchas,maxJugadores:d.maxJugadores,tipo:d.tipo,puntos:d.puntos,modo:d.modo,reglas:d.reglas,castigo:d.castigo},"Reta creada. Apúntate e invita a los demás.");
+    const r=await act("crearReta",{club:d.clubTexto.trim(),fecha:d.fecha,hora:d.hora,canchas:d.canchas,maxJugadores:d.maxJugadores,tipo:d.tipo,puntos:d.puntos,modo:d.modo,reglas:d.reglas,castigo:d.castigo,nivel:d.nivel||""},"Reta creada. Apúntate e invita a los demás.");
     if(r){S.draft=null;go("reta",{retaId:r.id})}}
 });
 

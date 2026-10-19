@@ -18,6 +18,7 @@ var HOJAS = {
   RETAS: ['id', 'creadorId', 'fecha', 'hora', 'club', 'canchas', 'maxJugadores', 'tipo', 'puntos', 'modo', 'reglas', 'castigo', 'jugadores', 'partidos', 'creado'],
   MARCADORES: ['id', 'retaId', 'matchId', 'a', 'b', 'porId', 'actualizado'],
   MULTAS: ['id', 'retaId', 'jugadorId', 'n'],
+  SUSCRIPCIONES: ['id', 'jugadorId', 'endpoint', 'creado', 'ultimo'],
   AVISOS: ['id', 'paraId', 'tipo', 'texto', 'retaId', 'deId', 'creado', 'leido'],
   PATROCINADORES: ['id', 'nombre', 'giro', 'paquete', 'cancha', 'cuota', 'forma', 'color', 'tinta', 'siglas', 'contacto', 'premio', 'lema', 'imagenId', 'activo', 'actualizado']
 };
@@ -56,6 +57,8 @@ function api(token, accion, datos) {
     if (accion === 'registro') return ok_(registro_(datos));
     if (accion === 'entrar') return ok_(entrar_(datos));
     if (accion === 'publico') return ok_(todo_(null, datos.version));
+    if (accion === 'vapid') return ok_({ llave: vapid_().pub });
+    if (accion === 'pushPendiente') return ok_(pushPendiente_(datos));
 
     var yo = sesion_(token);
     if (!yo) return { ok: false, error: 'Tu sesión terminó. Vuelve a entrar.', sesion: false };
@@ -77,6 +80,7 @@ function api(token, accion, datos) {
       borrarPatrocinador: function () { return borrarPatro_(yo, datos); },
       subirImagen: function () { return subirImagen_(yo, datos); },
       leerAvisos: function () { return leerAvisos_(yo); },
+      suscribir: function () { return suscribir_(yo, datos); },
       jugadoresAdmin: function () { return jugadoresAdmin_(yo); },
       resetPin: function () { return resetPin_(yo, datos); },
       estadoJugador: function () { return estadoJugador_(yo, datos); }
@@ -429,6 +433,7 @@ function tieneCuenta_(id) { var j = buscar_('JUGADORES', id); return !!(j && j.c
 function avisar_(paraId, tipo, texto, retaId, deId) {
   if (!paraId || paraId === deId || !tieneCuenta_(paraId)) return;
   guardar_('AVISOS', { id: nuevoId_('a'), paraId: paraId, tipo: tipo, texto: texto, retaId: retaId || '', deId: deId || '', creado: ahora_(), leido: '' });
+  try { enviarPush_(paraId); } catch (e) { console.warn('push', e); }
 }
 function avisarInscritos_(yo, r, antes, nueva) {
   var agregados = nueva.filter(function (x) { return antes.indexOf(x) < 0; });
@@ -671,3 +676,122 @@ function DEMO_() {
   return {"jugadores":[{"id":"j01","nombre":"Luis","apellido":"Ramírez","alias":"El Mago"},{"id":"j02","nombre":"Andrés","apellido":"Navarro","alias":"Tito"},{"id":"j03","nombre":"Jorge","apellido":"Medina","alias":"Chepo"},{"id":"j04","nombre":"Ricardo","apellido":"Ávila","alias":"Richi"},{"id":"j05","nombre":"Fernando","apellido":"Ortega","alias":"Fer"},{"id":"j06","nombre":"Daniel","apellido":"Cruz","alias":"Dani"},{"id":"j07","nombre":"Mauricio","apellido":"Salas","alias":"Mau"},{"id":"j08","nombre":"Gerardo","apellido":"Peña","alias":"Lalo"},{"id":"j09","nombre":"Iván","apellido":"Contreras","alias":"El Güero"},{"id":"j10","nombre":"Rodrigo","apellido":"Lara","alias":"Roy"},{"id":"j11","nombre":"Héctor","apellido":"Flores","alias":"Tito H"},{"id":"j12","nombre":"Pablo","apellido":"Guzmán","alias":"Polo"}],"clubs":[{"id":"demo-club-norte","nombre":"Pádel Norte","ciudad":"Tepic","canchas":4,"telefono":"311 220 4400","direccion":"","horario":"","creado":"2026-10-12T00:00:00.000Z"},{"id":"demo-club-alameda","nombre":"La Alameda Pádel","ciudad":"Tepic","canchas":3,"telefono":"311 214 9010","direccion":"","horario":"","creado":"2026-10-12T00:00:00.000Z"}],"retas":[{"id":"demo-1012","creadorId":"demo","fecha":"2026-10-12","hora":"20:00","club":"Pádel Norte","canchas":2,"maxJugadores":8,"tipo":"royal","puntos":24,"modo":"total","reglas":["Doble falta: pone una ballena","Primer lugar no paga cancha"],"castigo":"Ballenas","jugadores":["j01","j02","j03","j04","j05","j06","j07","j08"],"partidos":[{"id":"r1c1","ronda":1,"cancha":1,"a":["j08","j04"],"b":["j06","j05"]},{"id":"r1c2","ronda":1,"cancha":2,"a":["j01","j03"],"b":["j02","j07"]},{"id":"r2c1","ronda":2,"cancha":1,"a":["j06","j08"],"b":["j03","j07"]},{"id":"r2c2","ronda":2,"cancha":2,"a":["j01","j02"],"b":["j05","j04"]},{"id":"r3c1","ronda":3,"cancha":1,"a":["j05","j02"],"b":["j06","j07"]},{"id":"r3c2","ronda":3,"cancha":2,"a":["j01","j04"],"b":["j08","j03"]},{"id":"r4c1","ronda":4,"cancha":1,"a":["j08","j05"],"b":["j03","j02"]},{"id":"r4c2","ronda":4,"cancha":2,"a":["j07","j01"],"b":["j06","j04"]},{"id":"r5c1","ronda":5,"cancha":1,"a":["j01","j08"],"b":["j06","j02"]},{"id":"r5c2","ronda":5,"cancha":2,"a":["j04","j03"],"b":["j05","j07"]}],"creado":"2026-10-12T03:00:00.000Z"},{"id":"demo-1014","creadorId":"demo","fecha":"2026-10-14","hora":"19:00","club":"La Alameda Pádel","canchas":2,"maxJugadores":10,"tipo":"fija","puntos":21,"modo":"meta","reglas":["Doble falta: pone una ballena","Primer lugar no paga cancha","Último lugar paga las bebidas"],"castigo":"Ballenas","jugadores":["j01","j06","j02","j05","j03","j08","j04","j07"],"partidos":[{"id":"r1c1","ronda":1,"cancha":1,"a":["j02","j05"],"b":["j03","j08"]},{"id":"r1c2","ronda":1,"cancha":2,"a":["j01","j06"],"b":["j04","j07"]},{"id":"r2c1","ronda":2,"cancha":1,"a":["j01","j06"],"b":["j03","j08"]},{"id":"r2c2","ronda":2,"cancha":2,"a":["j04","j07"],"b":["j02","j05"]},{"id":"r3c1","ronda":3,"cancha":1,"a":["j03","j08"],"b":["j04","j07"]},{"id":"r3c2","ronda":3,"cancha":2,"a":["j01","j06"],"b":["j02","j05"]}],"creado":"2026-10-14T03:00:00.000Z"},{"id":"demo-1015","creadorId":"demo","fecha":"2026-10-15","hora":"20:30","club":"Pádel Norte","canchas":2,"maxJugadores":8,"tipo":"royal","puntos":24,"modo":"total","reglas":["Doble falta: pone una ballena","Primer lugar no paga cancha"],"castigo":"Ballenas","jugadores":["j03","j04","j05","j06","j09","j10","j11","j12"],"partidos":[{"id":"r1c1","ronda":1,"cancha":1,"a":["j06","j03"],"b":["j05","j04"]},{"id":"r1c2","ronda":1,"cancha":2,"a":["j11","j09"],"b":["j10","j12"]},{"id":"r2c1","ronda":2,"cancha":1,"a":["j12","j09"],"b":["j06","j05"]},{"id":"r2c2","ronda":2,"cancha":2,"a":["j03","j04"],"b":["j10","j11"]},{"id":"r3c1","ronda":3,"cancha":1,"a":["j03","j10"],"b":["j12","j06"]},{"id":"r3c2","ronda":3,"cancha":2,"a":["j11","j04"],"b":["j09","j05"]},{"id":"r4c1","ronda":4,"cancha":1,"a":["j12","j05"],"b":["j04","j10"]},{"id":"r4c2","ronda":4,"cancha":2,"a":["j03","j11"],"b":["j06","j09"]},{"id":"r5c1","ronda":5,"cancha":1,"a":["j11","j06"],"b":["j05","j10"]},{"id":"r5c2","ronda":5,"cancha":2,"a":["j03","j09"],"b":["j12","j04"]}],"creado":"2026-10-15T03:00:00.000Z"},{"id":"demo-1016","creadorId":"demo","fecha":"2026-10-16","hora":"21:00","club":"Pádel Norte","canchas":2,"maxJugadores":8,"tipo":"royal","puntos":24,"modo":"total","reglas":["Doble falta: pone una ballena","Primer lugar no paga cancha","Último lugar paga las bebidas"],"castigo":"Ballenas","jugadores":["j01","j02","j04","j07","j08","j09","j10","j12"],"partidos":[{"id":"r1c1","ronda":1,"cancha":1,"a":["j09","j07"],"b":["j01","j08"]},{"id":"r1c2","ronda":1,"cancha":2,"a":["j12","j02"],"b":["j04","j10"]},{"id":"r2c1","ronda":2,"cancha":1,"a":["j04","j01"],"b":["j10","j08"]},{"id":"r2c2","ronda":2,"cancha":2,"a":["j12","j07"],"b":["j09","j02"]},{"id":"r3c1","ronda":3,"cancha":1,"a":["j04","j02"],"b":["j01","j09"]},{"id":"r3c2","ronda":3,"cancha":2,"a":["j08","j07"],"b":["j10","j12"]},{"id":"r4c1","ronda":4,"cancha":1,"a":["j04","j09"],"b":["j07","j10"]},{"id":"r4c2","ronda":4,"cancha":2,"a":["j02","j01"],"b":["j12","j08"]},{"id":"r5c1","ronda":5,"cancha":1,"a":["j04","j07"],"b":["j12","j01"]},{"id":"r5c2","ronda":5,"cancha":2,"a":["j10","j02"],"b":["j08","j09"]}],"creado":"2026-10-16T03:00:00.000Z"},{"id":"demo-1017","creadorId":"demo","fecha":"2026-10-17","hora":"10:00","club":"La Alameda Pádel","canchas":2,"maxJugadores":10,"tipo":"fija","puntos":21,"modo":"meta","reglas":["Doble falta: pone una ballena","Primer lugar no paga cancha"],"castigo":"Ballenas","jugadores":["j02","j09","j01","j11","j03","j12","j04","j10","j05","j07"],"partidos":[{"id":"r1c1","ronda":1,"cancha":1,"a":["j01","j11"],"b":["j05","j07"]},{"id":"r1c2","ronda":1,"cancha":2,"a":["j03","j12"],"b":["j04","j10"]},{"id":"r2c1","ronda":2,"cancha":1,"a":["j01","j11"],"b":["j03","j12"]},{"id":"r2c2","ronda":2,"cancha":2,"a":["j02","j09"],"b":["j05","j07"]},{"id":"r3c1","ronda":3,"cancha":1,"a":["j02","j09"],"b":["j04","j10"]},{"id":"r3c2","ronda":3,"cancha":2,"a":["j05","j07"],"b":["j03","j12"]},{"id":"r4c1","ronda":4,"cancha":1,"a":["j04","j10"],"b":["j01","j11"]},{"id":"r4c2","ronda":4,"cancha":2,"a":["j02","j09"],"b":["j03","j12"]},{"id":"r5c1","ronda":5,"cancha":1,"a":["j04","j10"],"b":["j05","j07"]},{"id":"r5c2","ronda":5,"cancha":2,"a":["j02","j09"],"b":["j01","j11"]}],"creado":"2026-10-17T03:00:00.000Z"},{"id":"demo-1018","creadorId":"demo","fecha":"2026-10-18","hora":"19:00","club":"Pádel Norte","canchas":2,"maxJugadores":8,"tipo":"royal","puntos":24,"modo":"total","reglas":["Doble falta: pone una ballena","Primer lugar no paga cancha","Último lugar paga las bebidas"],"castigo":"Ballenas","jugadores":["j01","j03","j05","j06","j07","j08","j10","j11"],"partidos":[{"id":"r1c1","ronda":1,"cancha":1,"a":["j11","j01"],"b":["j07","j03"]},{"id":"r1c2","ronda":1,"cancha":2,"a":["j06","j05"],"b":["j08","j10"]},{"id":"r2c1","ronda":2,"cancha":1,"a":["j07","j01"],"b":["j10","j06"]},{"id":"r2c2","ronda":2,"cancha":2,"a":["j05","j08"],"b":["j11","j03"]},{"id":"r3c1","ronda":3,"cancha":1,"a":["j05","j03"],"b":["j06","j07"]},{"id":"r3c2","ronda":3,"cancha":2,"a":["j11","j08"],"b":["j10","j01"]},{"id":"r4c1","ronda":4,"cancha":1,"a":["j01","j06"],"b":["j11","j05"]},{"id":"r4c2","ronda":4,"cancha":2,"a":["j03","j08"],"b":["j10","j07"]},{"id":"r5c1","ronda":5,"cancha":1,"a":["j10","j11"],"b":["j07","j05"]},{"id":"r5c2","ronda":5,"cancha":2,"a":["j06","j08"],"b":["j03","j01"]},{"id":"r6c1","ronda":6,"cancha":1,"a":["j11","j07"],"b":["j08","j01"]},{"id":"r6c2","ronda":6,"cancha":2,"a":["j06","j03"],"b":["j10","j05"]}],"creado":"2026-10-18T03:00:00.000Z"},{"id":"demo-1019","creadorId":"demo","fecha":"2026-10-19","hora":"20:00","club":"La Alameda Pádel","canchas":2,"maxJugadores":8,"tipo":"royal","puntos":24,"modo":"total","reglas":["Doble falta: pone una ballena","Primer lugar no paga cancha"],"castigo":"Ballenas","jugadores":["j02","j04","j09","j12","j01"],"partidos":[],"creado":"2026-10-19T03:00:00.000Z"}],"marcadores":[{"id":"demo-1012__r1c1","retaId":"demo-1012","matchId":"r1c1","a":11,"b":13,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1012__r1c2","retaId":"demo-1012","matchId":"r1c2","a":19,"b":5,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1012__r2c1","retaId":"demo-1012","matchId":"r2c1","a":5,"b":19,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1012__r2c2","retaId":"demo-1012","matchId":"r2c2","a":18,"b":6,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1012__r3c1","retaId":"demo-1012","matchId":"r3c1","a":19,"b":5,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1012__r3c2","retaId":"demo-1012","matchId":"r3c2","a":19,"b":5,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1012__r4c1","retaId":"demo-1012","matchId":"r4c1","a":5,"b":19,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1012__r4c2","retaId":"demo-1012","matchId":"r4c2","a":19,"b":5,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1012__r5c1","retaId":"demo-1012","matchId":"r5c1","a":11,"b":13,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1012__r5c2","retaId":"demo-1012","matchId":"r5c2","a":17,"b":7,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1014__r1c1","retaId":"demo-1014","matchId":"r1c1","a":21,"b":18,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1014__r1c2","retaId":"demo-1014","matchId":"r1c2","a":10,"b":21,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1014__r2c1","retaId":"demo-1014","matchId":"r2c1","a":21,"b":15,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1014__r2c2","retaId":"demo-1014","matchId":"r2c2","a":21,"b":11,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1014__r3c1","retaId":"demo-1014","matchId":"r3c1","a":21,"b":10,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1014__r3c2","retaId":"demo-1014","matchId":"r3c2","a":15,"b":21,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1015__r1c1","retaId":"demo-1015","matchId":"r1c1","a":14,"b":10,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1015__r1c2","retaId":"demo-1015","matchId":"r1c2","a":17,"b":7,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1015__r2c1","retaId":"demo-1015","matchId":"r2c1","a":5,"b":19,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1015__r2c2","retaId":"demo-1015","matchId":"r2c2","a":19,"b":5,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1015__r3c1","retaId":"demo-1015","matchId":"r3c1","a":16,"b":8,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1015__r3c2","retaId":"demo-1015","matchId":"r3c2","a":11,"b":13,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1015__r4c1","retaId":"demo-1015","matchId":"r4c1","a":9,"b":15,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1015__r4c2","retaId":"demo-1015","matchId":"r4c2","a":16,"b":8,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1015__r5c1","retaId":"demo-1015","matchId":"r5c1","a":11,"b":13,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1015__r5c2","retaId":"demo-1015","matchId":"r5c2","a":15,"b":9,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1016__r1c1","retaId":"demo-1016","matchId":"r1c1","a":5,"b":19,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1016__r1c2","retaId":"demo-1016","matchId":"r1c2","a":13,"b":11,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1016__r2c1","retaId":"demo-1016","matchId":"r2c1","a":19,"b":5,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1016__r2c2","retaId":"demo-1016","matchId":"r2c2","a":5,"b":19,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1016__r3c1","retaId":"demo-1016","matchId":"r3c1","a":16,"b":8,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1016__r3c2","retaId":"demo-1016","matchId":"r3c2","a":16,"b":8,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1016__r4c1","retaId":"demo-1016","matchId":"r4c1","a":19,"b":5,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1016__r4c2","retaId":"demo-1016","matchId":"r4c2","a":19,"b":5,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1016__r5c1","retaId":"demo-1016","matchId":"r5c1","a":9,"b":15,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1016__r5c2","retaId":"demo-1016","matchId":"r5c2","a":18,"b":6,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1017__r1c1","retaId":"demo-1017","matchId":"r1c1","a":19,"b":21,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1017__r1c2","retaId":"demo-1017","matchId":"r1c2","a":14,"b":21,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1017__r2c1","retaId":"demo-1017","matchId":"r2c1","a":21,"b":15,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1017__r2c2","retaId":"demo-1017","matchId":"r2c2","a":15,"b":21,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1017__r3c1","retaId":"demo-1017","matchId":"r3c1","a":21,"b":8,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1017__r3c2","retaId":"demo-1017","matchId":"r3c2","a":21,"b":16,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1017__r4c1","retaId":"demo-1017","matchId":"r4c1","a":21,"b":10,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1017__r4c2","retaId":"demo-1017","matchId":"r4c2","a":21,"b":11,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1017__r5c1","retaId":"demo-1017","matchId":"r5c1","a":18,"b":21,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1017__r5c2","retaId":"demo-1017","matchId":"r5c2","a":21,"b":19,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1018__r1c1","retaId":"demo-1018","matchId":"r1c1","a":16,"b":8,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1018__r1c2","retaId":"demo-1018","matchId":"r1c2","a":19,"b":5,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-1018__r2c1","retaId":"demo-1018","matchId":"r2c1","a":19,"b":5,"porId":"demo","actualizado":"2026-10-18T00:00:00.000Z"}],"multas":[{"id":"demo-1012__j01","retaId":"demo-1012","jugadorId":"j01","n":2},{"id":"demo-1012__j05","retaId":"demo-1012","jugadorId":"j05","n":2},{"id":"demo-1012__j06","retaId":"demo-1012","jugadorId":"j06","n":1},{"id":"demo-1014__j05","retaId":"demo-1014","jugadorId":"j05","n":2},{"id":"demo-1014__j03","retaId":"demo-1014","jugadorId":"j03","n":1},{"id":"demo-1014__j08","retaId":"demo-1014","jugadorId":"j08","n":1},{"id":"demo-1014__j04","retaId":"demo-1014","jugadorId":"j04","n":1},{"id":"demo-1015__j03","retaId":"demo-1015","jugadorId":"j03","n":2},{"id":"demo-1015__j05","retaId":"demo-1015","jugadorId":"j05","n":1},{"id":"demo-1015__j06","retaId":"demo-1015","jugadorId":"j06","n":1},{"id":"demo-1015__j10","retaId":"demo-1015","jugadorId":"j10","n":1},{"id":"demo-1015__j12","retaId":"demo-1015","jugadorId":"j12","n":1},{"id":"demo-1016__j04","retaId":"demo-1016","jugadorId":"j04","n":1},{"id":"demo-1016__j07","retaId":"demo-1016","jugadorId":"j07","n":2},{"id":"demo-1016__j08","retaId":"demo-1016","jugadorId":"j08","n":2},{"id":"demo-1016__j09","retaId":"demo-1016","jugadorId":"j09","n":2},{"id":"demo-1017__j11","retaId":"demo-1017","jugadorId":"j11","n":2},{"id":"demo-1017__j12","retaId":"demo-1017","jugadorId":"j12","n":2},{"id":"demo-1017__j04","retaId":"demo-1017","jugadorId":"j04","n":1},{"id":"demo-1017__j10","retaId":"demo-1017","jugadorId":"j10","n":1},{"id":"demo-1017__j05","retaId":"demo-1017","jugadorId":"j05","n":1},{"id":"demo-1017__j07","retaId":"demo-1017","jugadorId":"j07","n":1},{"id":"demo-1018__j01","retaId":"demo-1018","jugadorId":"j01","n":1},{"id":"demo-1018__j03","retaId":"demo-1018","jugadorId":"j03","n":2},{"id":"demo-1018__j06","retaId":"demo-1018","jugadorId":"j06","n":1},{"id":"demo-1018__j10","retaId":"demo-1018","jugadorId":"j10","n":2}],"patrocinadores":[{"id":"demo-altamira","nombre":"Inmobiliaria Altamira","giro":"Bienes raíces","paquete":"colaborador","cancha":null,"cuota":800,"forma":"escudo","color":"#0f9d58","tinta":"#ffffff","siglas":"IA","contacto":"311 512 7788","premio":"","lema":"","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-autos-valle","nombre":"Autos del Valle","giro":"Agencia de autos","paquete":"cancha","cancha":4,"cuota":1500,"forma":"rombo","color":"#2f7bff","tinta":"#ffffff","siglas":"AV","contacto":"311 260 4433","premio":"","lema":"","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-barberia-bandeja","nombre":"Barbería La Bandeja","giro":"Barbería","paquete":"banner","cancha":null,"cuota":450,"forma":"escudo","color":"#ff3d6e","tinta":"#ffffff","siglas":"LB","contacto":"311 389 1720","premio":"","lema":"Corte + barba $180 mostrando tu perfil","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-cafe-la-pared","nombre":"Café La Pared","giro":"Cafetería","paquete":"banner","cancha":null,"cuota":500,"forma":"circulo","color":"#c8814a","tinta":"#ffffff","siglas":"LP","contacto":"311 222 0945","premio":"","lema":"Tu café antes de la reta, 2x1 en frappé","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-cerro-alto","nombre":"Cervecería Cerro Alto","giro":"Cerveza artesanal","paquete":"cancha","cancha":1,"cuota":1500,"forma":"escudo","color":"#f2b230","tinta":"#0a0d00","siglas":"CA","contacto":"311 303 1180","premio":"","lema":"","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-fisiomove","nombre":"FisioMove","giro":"Fisioterapia deportiva","paquete":"colaborador","cancha":null,"cuota":700,"forma":"circulo","color":"#19c3b1","tinta":"#0a0d00","siglas":"FM","contacto":"311 334 9810","premio":"","lema":"","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-fuerza-nayar","nombre":"Fuerza Nayar Gym","giro":"Gimnasio","paquete":"cancha","cancha":3,"cuota":1200,"forma":"cuadro","color":"#e53935","tinta":"#ffffff","siglas":"FN","contacto":"311 118 7702","premio":"","lema":"","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-lavado-express","nombre":"Lavado Express","giro":"Autolavado","paquete":"banner","cancha":null,"cuota":400,"forma":"gota","color":"#27c4ff","tinta":"#0a0d00","siglas":"LE","contacto":"311 274 8815","premio":"","lema":"Lavado completo mientras juegas","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-pulso","nombre":"Pulso Isotónico","giro":"Bebida deportiva","paquete":"colaborador","cancha":null,"cuota":700,"forma":"gota","color":"#00b3ff","tinta":"#ffffff","siglas":"P","contacto":"311 201 6620","premio":"","lema":"","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-seguros-punto-oro","nombre":"Seguros Punto de Oro","giro":"Seguros de auto y gastos médicos","paquete":"banner","cancha":null,"cuota":600,"forma":"hexagono","color":"#ffc53d","tinta":"#0a0d00","siglas":"PO","contacto":"311 166 4401","premio":"","lema":"Cotiza gratis tu seguro de gastos médicos","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-smash","nombre":"Smash Smoothies","giro":"Jugos y smoothies","paquete":"cancha","cancha":2,"cuota":1200,"forma":"gota","color":"#ff4fa3","tinta":"#ffffff","siglas":"S","contacto":"311 455 2091","premio":"","lema":"","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-tacos-reves","nombre":"Tacos El Revés","giro":"Taquería","paquete":"colaborador","cancha":null,"cuota":500,"forma":"circulo","color":"#ffd23f","tinta":"#0a0d00","siglas":"TR","contacto":"311 147 3355","premio":"","lema":"","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-vision-clara","nombre":"Ópticas Visión Clara","giro":"Óptica y lentes deportivos","paquete":"colaborador","cancha":null,"cuota":600,"forma":"cuadro","color":"#8e5cff","tinta":"#ffffff","siglas":"VC","contacto":"311 289 0147","premio":"","lema":"","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"},{"id":"demo-volea","nombre":"Volea Sports","giro":"Tienda de pádel","paquete":"oficial","cancha":null,"cuota":3500,"forma":"hexagono","color":"#ff7a1a","tinta":"#0a0d00","siglas":"VS","contacto":"311 210 5577","premio":"un overgrip Pro","lema":"Raquetas, pelotas y grips con 15% para jugadores de La Reta","imagenId":"","activo":true,"actualizado":"2026-10-18T00:00:00.000Z"}]};
 }
 
+
+/* ===================== Notificaciones push (Web Push con VAPID) ===================== */
+/* La notificación viaja vacía; el celular pide el texto del aviso a este servidor al recibirla. */
+
+var P256_ = null;
+function p256_() {
+  if (P256_) return P256_;
+  var B = function (h) { return BigInt('0x' + h); };
+  P256_ = {
+    p: B('ffffffff00000001000000000000000000000000ffffffffffffffffffffffff'),
+    n: B('ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551'),
+    G: [B('6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296'), B('4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5')]
+  };
+  P256_.a = P256_.p - BigInt(3);
+  return P256_;
+}
+function mod_(a, m) { var r = a % m; return r < BigInt(0) ? r + m : r; }
+function inv_(a, m) {
+  var lm = BigInt(1), hm = BigInt(0), low = mod_(a, m), high = m, Z = BigInt(0);
+  while (low > BigInt(1)) { var r = high / low, nm = hm - lm * r, nw = high - low * r; hm = lm; high = low; lm = nm; low = nw; }
+  return mod_(lm, m);
+}
+function sumaPt_(P, Q) {
+  var c = p256_(), p = c.p;
+  if (!P) return Q; if (!Q) return P;
+  var l;
+  if (P[0] === Q[0]) {
+    if (mod_(P[1] + Q[1], p) === BigInt(0)) return null;
+    l = mod_((BigInt(3) * P[0] * P[0] + c.a) * inv_(BigInt(2) * P[1], p), p);
+  } else {
+    l = mod_((Q[1] - P[1]) * inv_(Q[0] - P[0], p), p);
+  }
+  var x = mod_(l * l - P[0] - Q[0], p);
+  return [x, mod_(l * (P[0] - x) - P[1], p)];
+}
+function porEscalar_(k, P) {
+  var R = null, A = P;
+  while (k > BigInt(0)) { if (k & BigInt(1)) R = sumaPt_(R, A); A = sumaPt_(A, A); k = k >> BigInt(1); }
+  return R;
+}
+function bytesAHex_(b) { return b.map(function (x) { var v = (x < 0 ? x + 256 : x).toString(16); return v.length === 1 ? '0' + v : v; }).join(''); }
+function hexABytes_(h) { var o = []; for (var i = 0; i < h.length; i += 2) { var v = parseInt(h.substr(i, 2), 16); o.push(v > 127 ? v - 256 : v); } return o; }
+function big32_(x) { var h = x.toString(16); while (h.length < 64) h = '0' + h; return h; }
+function b64url_(bytes) { return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/, ''); }
+function azarN_() {
+  var c = p256_(), k = BigInt(0);
+  while (k === BigInt(0)) {
+    var h = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, Utilities.getUuid() + Utilities.getUuid() + Date.now() + Math.random(), Utilities.Charset.UTF_8);
+    k = mod_(BigInt('0x' + bytesAHex_(h)), c.n);
+  }
+  return k;
+}
+function vapid_() {
+  var pr = PropertiesService.getScriptProperties(), d = pr.getProperty('VAPID_D'), pub = pr.getProperty('VAPID_PUB');
+  if (!d || !pub) {
+    var c = p256_(), k = azarN_(), Q = porEscalar_(k, c.G);
+    d = big32_(k); pub = b64url_(hexABytes_('04' + big32_(Q[0]) + big32_(Q[1])));
+    pr.setProperty('VAPID_D', d); pr.setProperty('VAPID_PUB', pub);
+  }
+  return { d: d, pub: pub };
+}
+function firmarES256_(texto, dHex) {
+  var c = p256_(), d = BigInt('0x' + dHex);
+  var e = BigInt('0x' + bytesAHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, texto, Utilities.Charset.UTF_8)));
+  while (true) {
+    var k = azarN_(), R = porEscalar_(k, c.G), r = mod_(R[0], c.n);
+    if (r === BigInt(0)) continue;
+    var s = mod_(inv_(k, c.n) * (e + r * d), c.n);
+    if (s === BigInt(0)) continue;
+    return b64url_(hexABytes_(big32_(r) + big32_(s)));
+  }
+}
+function jwtVapid_(endpoint) {
+  var v = vapid_(), aud = String(endpoint).match(/^https:\/\/[^\/]+/)[0];
+  var enc = function (o) { return b64url_(Utilities.newBlob(JSON.stringify(o)).getBytes()); };
+  var cuerpo = enc({ typ: 'JWT', alg: 'ES256' }) + '.' + enc({ aud: aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'mailto:avisos@lareta.app' });
+  return { jwt: cuerpo + '.' + firmarES256_(cuerpo, v.d), pub: v.pub };
+}
+function suscribir_(yo, d) {
+  var ep = String(d.endpoint || '');
+  if (!/^https:\/\/[a-z0-9.-]+\//i.test(ep) || ep.length > 1000) falla_('Suscripción no válida.');
+  return conCandado_(function () {
+    var id = bytesAHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, ep, Utilities.Charset.UTF_8)).slice(0, 24);
+    var s = buscar_('SUSCRIPCIONES', id) || { id: id, endpoint: ep, creado: ahora_() };
+    s.jugadorId = yo.id; s.ultimo = ahora_();
+    guardar_('SUSCRIPCIONES', s);
+    return true;
+  });
+}
+function enviarPush_(jugadorId) {
+  var subs = tabla_('SUSCRIPCIONES').filter(function (s) { return s.jugadorId === jugadorId; });
+  if (!subs.length) return 0;
+  var reqs = subs.map(function (s) {
+    var t = jwtVapid_(s.endpoint);
+    return { url: s.endpoint, method: 'post', muteHttpExceptions: true, contentType: 'application/octet-stream', payload: '',
+      headers: { TTL: '86400', Urgency: 'high', Authorization: 'vapid t=' + t.jwt + ', k=' + t.pub } };
+  });
+  var res = UrlFetchApp.fetchAll(reqs), muertas = [];
+  res.forEach(function (r, i) { var c = r.getResponseCode(); if (c === 404 || c === 410) muertas.push(subs[i]); });
+  muertas.map(function (s) { return s._fila; }).sort(function (a, b) { return b - a; }).forEach(function (f) { hoja_('SUSCRIPCIONES').deleteRow(f); });
+  if (muertas.length) delete CACHE_TABLAS_.SUSCRIPCIONES;
+  return res.length - muertas.length;
+}
+function pushPendiente_(d) {
+  var ep = String(d.endpoint || ''), sub = null;
+  tabla_('SUSCRIPCIONES').forEach(function (s) { if (s.endpoint === ep) sub = s; });
+  if (!sub) return null;
+  var av = tabla_('AVISOS').filter(function (a) { return a.paraId === sub.jugadorId && !a.leido; })
+    .sort(function (a, b) { return a.creado < b.creado ? 1 : -1; });
+  if (!av.length) return null;
+  return { texto: av[0].texto, retaId: av[0].retaId, id: av[0].id, pendientes: av.length };
+}
+
+/** Ejecútala una vez desde el editor después de pegar el código, para autorizar el envío de notificaciones. */
+function autorizarNotificaciones() {
+  vapid_();
+  UrlFetchApp.fetch('https://www.google.com', { muteHttpExceptions: true });
+  Logger.log('Listo: notificaciones autorizadas.');
+}

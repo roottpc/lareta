@@ -50,6 +50,8 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify(r)).setMimeType(ContentService.MimeType.JSON);
 }
 
+var CON_TODO_ = { perfil: 1, club: 1, bloqueo: 1, crearReta: 1, inscritos: 1, partidos: 1, borrarReta: 1, patrocinador: 1, borrarPatrocinador: 1, estadoJugador: 1, nivelJugador: 1, faltaUno: 1 };
+
 /** Punto único de entrada desde la app. */
 function api(token, accion, datos) {
   try {
@@ -92,7 +94,10 @@ function api(token, accion, datos) {
       faltaUno: function () { return faltaUno_(yo, datos); }
     };
     if (!acciones[accion]) throw new Error('Acción no válida.');
-    return ok_(acciones[accion]());
+    var res = ok_(acciones[accion]());
+    // Para acciones que cambian datos, manda de una vez los datos nuevos: la app se ahorra una segunda llamada.
+    if (CON_TODO_[accion]) { CACHE_TABLAS_ = {}; res.todo = todo_(sesion_(token) || yo, ''); }
+    return res;
   } catch (e) {
     return { ok: false, error: String(e && e.message || e) };
   }

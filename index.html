@@ -238,7 +238,7 @@ nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:re
 .spons::before,.spons::after{content:"";position:absolute;top:0;bottom:0;width:22px;z-index:2;pointer-events:none}
 .spons::before{left:0;background:linear-gradient(90deg,#050607,transparent)}.spons::after{right:0;background:linear-gradient(270deg,#050607,transparent)}
 .spons .lbl-sp{position:absolute;left:50%;top:-1px;transform:translateX(-50%);z-index:3;background:var(--ball);color:var(--ball-ink);font:800 9px/1 var(--f-body);letter-spacing:.18em;text-transform:uppercase;padding:3px 10px 4px;border-radius:0 0 8px 8px}
-.spons .track{display:flex;gap:14px;align-items:center;height:100px;width:max-content;padding:10px 12px 0}
+.spons .track{will-change:transform;display:flex;gap:14px;align-items:center;height:100px;width:max-content;padding:10px 12px 0}
 @media (prefers-reduced-motion:no-preference){.spons .track.go{animation:marq var(--dur,40s) linear infinite}.spons:hover .track,.spons:active .track{animation-play-state:paused}}
 @media (prefers-reduced-motion:reduce){.spons{overflow-x:auto}}
 @keyframes marq{to{transform:translateX(-50%)}}
@@ -255,7 +255,7 @@ nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:re
 .sp-card.claro{color:#0a0d00}.sp-card.claro .tx b,.sp-card.claro .tx small{text-shadow:none}.sp-card.claro .tx i{background:#0a0d00;color:var(--ball)}
 .sp-card::after,.sp-img::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.4),transparent);transform:skewX(-18deg);pointer-events:none}
 @media (prefers-reduced-motion:no-preference){.sp-card::after,.sp-img::after{animation:brillo 3.6s ease-in-out infinite;animation-delay:var(--d,0s)}}
-@keyframes brillo{0%,60%{left:-60%}100%{left:130%}}
+@keyframes brillo{0%,60%{transform:translateX(0) skewX(-18deg)}100%{transform:translateX(480%) skewX(-18deg)}}
 .sp-img img{height:72px;width:auto;max-width:360px;object-fit:cover;display:block}
 .sp-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--ball);box-shadow:var(--glow)}
 .slogo{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;font-weight:600;font-size:13px;color:var(--ink)}
@@ -306,8 +306,8 @@ body.welcome nav.tabs,body.welcome #who{display:none}
 .sp-row:first-child{border-top:0}
 .tier{font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
 .tier.oficial{border-color:#ffd45a;color:#ffd45a}.tier.cancha{border-color:var(--ball);color:var(--ball)}
-body.busy header.top::after{content:"";position:absolute;left:0;bottom:-2px;height:2px;width:35%;background:#fff;box-shadow:0 0 10px #fff;animation:busy 1s ease-in-out infinite}
-@keyframes busy{0%{left:-35%}100%{left:100%}}
+body.busy header.top::after{content:"";position:absolute;left:0;bottom:-2px;height:2px;width:35%;background:#fff;box-shadow:0 0 10px #fff;left:0;animation:busy 1s ease-in-out infinite}
+@keyframes busy{0%{transform:translateX(-100%)}100%{transform:translateX(290%)}}
 .rk tr.yo td.nm{outline:1px solid var(--ball);outline-offset:-1px}
 .me-btn:hover{background:rgba(212,255,31,.12)}
 nav.tabs button{appearance:none;border:0;background:none;padding:10px 4px 12px;font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-top:3px solid transparent}
@@ -1178,7 +1178,7 @@ function call(accion,datos){
     if(!(window.google&&google.script&&google.script.run)){
       fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({token:getTok(),accion,datos:datos||{}})})
         .then(x=>x.json()).then(r=>{busy(-1);
-          if(r&&r.ok)return res(r.data);
+          if(r&&r.ok){if(r.todo){S.todoAt=Date.now();if(apply(r.todo)){S.keepScroll=true;render()}}return res(r.data)}
           if(r&&r.sesion===false){setTok("");S.uid=null;S.yo=null;S.isOwner=false;S.canWrite=false;go("inicio");refresh(true)}
           rej(new Error((r&&r.error)||"No se pudo completar."))})
         .catch(()=>{busy(-1);rej(new Error("Sin conexión. Revisa tu internet e intenta de nuevo."))});
@@ -1205,6 +1205,7 @@ function apply(d){
   if(S.uid&&S.avisosVistos){av.filter(a=>!a.leido&&!S.avisosVistos.has(a.id)).slice(0,3).forEach(notificar)}
   S.avisos=av;S.avisosVistos=new Set(av.map(a=>a.id));
   S.loadedPlayers=true;S.status="ready";
+  try{if(getTok()||!d.yo)localStorage.setItem("lareta_cache",JSON.stringify({t:getTok().slice(-16),d}))}catch(e){}
   renderSpons();return true;
 }
 async function refresh(force){
@@ -1212,7 +1213,7 @@ async function refresh(force){
   catch(e){if(S.status==="loading"){S.status="error";S.err=e.message;render()}}
 }
 async function act(accion,datos,msg){
-  try{const r=await call(accion,datos);await refresh(true);if(msg)flash(msg);return r}
+  try{const t0=Date.now();const r=await call(accion,datos);if(!(S.todoAt>=t0))await refresh(true);if(msg)flash(msg);return r}
   catch(e){flash(e.message);refresh(true);return null}
 }
 
@@ -1374,7 +1375,8 @@ if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.ser
 /* ---------- arranque ---------- */
 (async()=>{
   S.version="";
-  await refresh(true);
+  let cache=null;try{const c=JSON.parse(localStorage.getItem("lareta_cache")||"null");if(c&&c.d&&c.t===getTok().slice(-16))cache=c.d}catch(e){}
+  if(cache){apply(cache);S.version=cache.version;refresh(false)}else await refresh(true);
   if(S.status!=="ready")return;
   S.view=S.uid?"retas":"inicio";
   try{const t=+localStorage.getItem("lareta_pushNo");if(t&&Date.now()-t<7*864e5)S.pushNo=true}catch(e){}

@@ -651,11 +651,12 @@ function vPatros(){
 }
 function vRanking(){
   const st=computeStats();const modo=S.rkModo||"sets";const val=x=>modo==="sets"?x.sets:x.elo;
-  const rows=Object.entries(st).filter(([id])=>S.players[id]).sort((a,b)=>val(b[1])-val(a[1])||b[1].elo-a[1].elo);
+  Object.keys(S.players).forEach(id=>{st[id]??={elo:1000,pj:0,pg:0,pe:0,pp:0,pf:0,pc:0,last:[],sets:0,retas:0}});
+  const rows=Object.entries(st).filter(([id])=>S.players[id]).sort((a,b)=>val(b[1])-val(a[1])||b[1].elo-a[1].elo||pname(a[0]).localeCompare(pname(b[0])));
   const lo=rows.length?Math.min(...rows.map(r=>val(r[1]))):0,hi=rows.length?Math.max(...rows.map(r=>val(r[1]))):0;
   const trend=l=>l.slice(-5).map(x=>x===1?"G":x===0?"P":"E").join(" ");
   const of=oficial();let pos=0,prev=null;
-  return`<div class="stack"><h1>Ranking</h1>${of?heroHTML(of):""}
+  return`<div class="stack"><div class="section-head"><h1>Ranking</h1><span class="muted small">${rows.length} jugadores</span></div>${of?heroHTML(of):""}
   <div class="seg" role="tablist"><label><input type="radio" name="rk" data-act="rkModo" value="sets" ${modo==="sets"?"checked":""}>Puntos</label><label><input type="radio" name="rk" data-act="rkModo" value="rating" ${modo==="rating"?"checked":""}>Rating</label></div>
   <p class="muted" style="margin:0">${modo==="sets"?"<b>Puntos</b> suma los puntos ganados en todas las retas: las históricas cargadas de las fotos y cada partido capturado en la app.":"Todos empiezan en 1000. Cada partido compara el promedio de las dos parejas: ganarle a una pareja más fuerte da más puntos y perder con una más débil quita más. <b>Dif</b> = puntos anotados menos puntos recibidos."}</p>
   ${rows.length?`<div class="panel tbl-wrap rk"><table><thead><tr><th>#</th><th>Jugador</th>${modo==="sets"?"<th>Puntos</th><th>Retas</th><th>Rating</th>":"<th>Rating</th><th>PJ</th><th>PG</th><th>%</th><th>Dif</th><th>Últimos</th><th>Puntos</th>"}</tr></thead><tbody>

@@ -129,7 +129,49 @@ tr.first .pos{color:var(--ball);text-shadow:var(--glow)}
 /* tabs */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--head);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
-nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(2,1fr)}
+nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.days{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.days::-webkit-scrollbar{display:none}
+.day{flex:none;appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:8px 12px;text-align:center;cursor:pointer;min-width:62px}
+.day b{display:block;font-family:var(--f-display);font-size:22px;line-height:1}
+.day span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.day.on{background:var(--ball);border-color:var(--ball);color:var(--ball-ink)}.day.on span{color:var(--ball-ink)}
+.courts{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
+.court-c{position:relative;border-radius:6px;padding:36px 12px 16px;background:linear-gradient(180deg,#0f4f8a,#0b3e6e);border:3px solid rgba(255,255,255,.85);box-shadow:0 0 0 5px #13202b,0 0 24px rgba(0,140,255,.25);overflow:hidden}
+.court-c .net{position:absolute;left:0;right:0;top:50%;border-top:3px dashed rgba(255,255,255,.9)}
+.court-c .sl1,.court-c .sl2{position:absolute;left:0;right:0;border-top:2px solid rgba(255,255,255,.4)}
+.court-c .sl1{top:24%}.court-c .sl2{bottom:24%}
+.court-c .cl{position:absolute;left:50%;top:24%;bottom:24%;border-left:2px solid rgba(255,255,255,.4)}
+.court-c .nm{position:absolute;left:0;right:0;top:7px;text-align:center;font-family:var(--f-display);font-weight:800;font-size:17px;letter-spacing:.08em;text-transform:uppercase;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.court-c .lib{position:absolute;right:8px;top:9px;font-size:11px;color:#cfe7ff}
+.slots{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.slot{appearance:none;border:1px solid rgba(212,255,31,.9);background:rgba(5,20,35,.82);color:var(--ball);border-radius:8px;padding:7px 2px;font:600 13px/1.1 var(--f-body);text-align:center;font-variant-numeric:tabular-nums;cursor:default}
+.slot small{display:block;font-size:9px;letter-spacing:.06em;text-transform:uppercase;opacity:.85;margin-top:2px}
+.slot.ocupado{border-color:rgba(255,255,255,.18);background:rgba(10,15,20,.8);color:rgba(255,255,255,.45)}
+.slot.ocupado b{text-decoration:line-through;font-weight:600}
+.slot.reta{background:var(--ball);color:var(--ball-ink);border-color:var(--ball)}
+.slot.pasado{opacity:.32}
+.editando .slot:not(.reta):not(.pasado){cursor:pointer}
+.editando .court-c{box-shadow:0 0 0 5px var(--ball),0 0 24px rgba(212,255,31,.35)}
+.leyenda{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.leyenda i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px;border:1px solid}
+.fotos{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.fotos::-webkit-scrollbar{display:none}
+.fotos img{flex:none;width:86%;max-width:560px;aspect-ratio:4/3;object-fit:cover;border-radius:12px;scroll-snap-align:start;background:var(--surface)}
+.fotos img:only-child{width:100%}
+.club-card{display:grid;grid-template-columns:100px 1fr;gap:14px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;color:var(--ink);font:inherit}
+.club-card:hover{border-color:var(--ball)}
+.club-card .ph{width:100px;height:80px;border-radius:8px;object-fit:cover;background:linear-gradient(180deg,#0f4f8a,#0b3e6e);display:grid;place-items:center;color:#fff;font-family:var(--f-display);font-weight:800;font-size:26px}
+.club-card .alias{font-size:21px}
+.thumbs{display:flex;gap:10px;flex-wrap:wrap}
+.thumb{position:relative;width:92px;height:72px}
+.thumb img{width:100%;height:100%;object-fit:cover;border-radius:8px}
+.thumb button{position:absolute;top:-7px;right:-7px;width:26px;height:26px;border-radius:50%;border:0;background:var(--bad);color:#fff;font-weight:700;cursor:pointer;padding:0}
+.linkclub{appearance:none;border:0;background:none;color:inherit;padding:0;font:inherit;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--ball);text-decoration-thickness:3px;text-underline-offset:7px}
+.acciones{display:flex;gap:10px;flex-wrap:wrap}
+.acciones .btn{flex:1 1 140px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.acciones a.btn:not(.wa){color:var(--ink)}
+
 .share{display:flex;gap:10px;flex-wrap:wrap}
 .share .btn{flex:1 1 140px}
 .btn.wa{background:#25d366;border-color:#25d366;color:#04210f;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
@@ -223,6 +265,7 @@ img{max-width:100%}
 <main class="wrap" id="main"><div class="empty"><strong>Cargando</strong>Conectando con las retas…</div></main>
 <nav class="tabs" aria-label="Secciones"><div class="spons" id="spons" aria-label="Patrocinadores"></div><div class="in">
   <button data-act="tab" data-v="retas">Retas</button>
+  <button data-act="tab" data-v="clubs">Clubs</button>
   <button data-act="tab" data-v="ranking">Ranking</button>
 </div></nav>
 
@@ -344,14 +387,14 @@ function render(){
   if((S.view==="perfil"||S.view==="cuentas"||S.view==="patros"||S.view==="nueva")&&!S.uid)S.view="inicio";
   if(S.view==="registro"&&S.uid)S.view="retas";
   if(S.view==="retas"&&!S.uid&&!S.welcomed)S.view="inicio";
-  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===(S.view==="reta"||S.view==="nueva"?"retas":S.view)));
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===(S.view==="reta"||S.view==="nueva"?"retas":S.view==="clubPub"?"clubs":S.view)));
   const me=S.uid&&S.players[S.uid];const wb=document.getElementById("who");if(wb){wb.textContent=me?(me.alias||me.nombre):"Entrar";wb.dataset.v=me?"perfil":"inicio"}
   document.body.classList.toggle("welcome",S.view==="inicio"||S.view==="registro");
   const nb=(S.avisos||[]).filter(a=>!a.leido).length;const bl=document.getElementById("bell");
   if(bl){bl.hidden=!S.uid;bl.classList.toggle("on",nb>0);const bn=document.getElementById("bellN");bn.hidden=!nb;bn.textContent=nb>9?"9+":nb}
   try{if(navigator.setAppBadge){nb?navigator.setAppBadge(nb):navigator.clearAppBadge()}}catch(e){}
   if(S.view==="avisos"&&!S.uid)S.view="inicio";
-  const v={avisos:vAvisos,inicio:vWelcome,registro:vRegistro,club:vClub,retas:vRetas,nueva:vNueva,reta:vReta,perfil:vPerfil,ranking:vRanking,patros:vPatros,cuentas:vCuentas}[S.view]||vRetas;
+  const v={clubs:vClubs,clubPub:vClubPub,avisos:vAvisos,inicio:vWelcome,registro:vRegistro,club:vClub,retas:vRetas,nueva:vNueva,reta:vReta,perfil:vPerfil,ranking:vRanking,patros:vPatros,cuentas:vCuentas}[S.view]||vRetas;
   const y=window.scrollY;main.innerHTML=v();
   if(S.keepScroll)window.scrollTo(0,y);S.keepScroll=false;
 }
@@ -444,7 +487,7 @@ function vReta(){
   let h=`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="retas">← Retas</button></div>
   ${bs.length?bannerHTML(bs[hashStr(id)%bs.length]):""}
   <div class="panel stack"><div class="row between"><span class="chip ${st.cls}">${esc(st.label)}</span><span class="muted small">${fija?"Pareja fija":"Royal"}</span></div>
-    <h1>${esc(clubName(r))}</h1>
+    <h1>${clubPorNombre(clubName(r))?`<button class="linkclub" data-act="verClub" data-id="${esc(clubPorNombre(clubName(r)).id)}">${esc(clubName(r))}</button>`:esc(clubName(r))}</h1>
     <div class="row" style="font-family:var(--f-display);font-size:20px;font-weight:700;text-transform:uppercase">${esc(fmtDate(r.fecha))} · ${esc(fmtHora(r.hora))}</div>
     <div class="row"><span class="chip">${r.canchas} cancha${r.canchas>1?"s":""}</span><span class="chip">${ins.length}/${r.maxJugadores} jugadores</span><span class="chip">${r.modo==="total"?`${r.puntos} puntos totales`:`A ${r.puntos} puntos`}</span></div>
     ${(r.reglas||[]).length?`<div><span class="label">Reglas</span><ul class="rules">${r.reglas.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
@@ -571,6 +614,99 @@ function compartirHTML(id,r){const t=textoReta(id,r);
   <div class="preview" id="txt-compartir">${esc(t)}</div>
   <div class="share"><a class="btn wa" href="https://wa.me/?text=${encodeURIComponent(t)}" target="_blank" rel="noopener">${WA_SVG}Enviar por WhatsApp</a>
   <button class="btn" data-act="copiar">Copiar texto</button>${navigator.share?`<button class="btn" data-act="masApps">Otras apps</button>`:""}</div></div>`}
+
+/* ---------- clubs y canchas ---------- */
+const RETA_MIN=120;
+const norm=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim();
+const clubPorNombre=n=>{const k=norm(n);return k?Object.values(S.clubs).find(c=>norm(c.nombre)===k):null};
+const aMin=h=>{const[a,b]=String(h||"0:0").split(":").map(Number);return a*60+(b||0)};
+const deMin=m=>String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
+const fmtCorta=h=>{const[H,M]=h.split(":").map(Number);return((H%12)||12)+":"+String(M).padStart(2,"0")+(H>=12?" pm":" am")};
+const fotoURL=(id,w)=>imgURL(id).replace(/=w\d+$/,"=w"+(w||1200));
+function diasProx(n){const o=[];const d=new Date();for(let i=0;i<n;i++){const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()+i);o.push(x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0"))}return o}
+function slotsClub(c,fecha){
+  const ap=aMin(c.apertura||"07:00"),ci=aMin(c.cierre||"23:00"),tu=Number(c.turno)||90,n=Math.max(1,Number(c.canchas)||1);
+  const ahora=new Date();const hoy=today();const minAhora=ahora.getHours()*60+ahora.getMinutes();
+  const bl={};(S.bloqueos||[]).forEach(b=>{if(b.clubId===c.id&&b.fecha===fecha)bl[b.cancha+"_"+b.hora]=b});
+  const rs=Object.entries(S.retas).filter(([,r])=>!esHist(r)&&r.fecha===fecha&&norm(r.club||r.clubTexto)===norm(c.nombre));
+  const out=[];
+  for(let k=1;k<=n;k++){const lista=[];
+    for(let m=ap;m+tu<=ci;m+=tu){const h=deMin(m);let est="libre",nota="";
+      const reta=rs.find(([,r])=>k<=(r.canchas||1)&&m<aMin(r.hora)+RETA_MIN&&m+tu>aMin(r.hora));
+      if(reta){est="reta";nota="Reta"}
+      else if(bl[k+"_"+h]){est="ocupado";nota=bl[k+"_"+h].nota||"Ocupado"}
+      const pas=fecha<hoy||(fecha===hoy&&m+tu<=minAhora);
+      lista.push({h,m,est,nota,pas,retaId:reta?reta[0]:null})}
+    out.push(lista)}
+  return out;
+}
+function esMiClub(c){return !!S.uid&&(c.ownerId===S.uid||S.isOwner)}
+function vClubs(){
+  const l=Object.values(S.clubs).sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||""));const hoy=today();
+  return`<div class="stack"><div class="section-head"><h1>Clubs</h1>${S.uid?`<button class="btn sm" data-act="tab" data-v="club">${myClub()?"Mi club":"Registrar club"}</button>`:""}</div>
+  <p class="muted" style="margin:0">Elige un club para ver sus canchas y los horarios disponibles.</p>
+  ${l.length?`<div class="stack" style="gap:10px">${l.map(c=>{const libres=slotsClub(c,hoy).flat().filter(x=>x.est==="libre"&&!x.pas).length;
+    return`<button class="club-card" data-act="verClub" data-id="${esc(c.id)}">${(c.fotos||[])[0]?`<img class="ph" src="${fotoURL(c.fotos[0],400)}" alt="" referrerpolicy="no-referrer">`:`<span class="ph">${esc((c.nombre||"?").slice(0,2).toUpperCase())}</span>`}
+    <span><div class="alias">${esc(c.nombre)}</div><div class="muted small">${esc([c.direccion,c.ciudad].filter(Boolean).join(" · "))}</div>
+    <div class="row" style="margin-top:6px;gap:6px"><span class="chip">${c.canchas||1} cancha${(c.canchas||1)>1?"s":""}</span><span class="chip falta">${libres} libre${libres===1?"":"s"} hoy</span></div></span></button>`}).join("")}</div>`
+   :`<div class="panel empty"><strong>Aún no hay clubs</strong>Los clubs se registran desde su perfil y aquí aparecen con sus canchas y horarios.</div>`}</div>`;
+}
+function vClubPub(){
+  const c=S.clubs[S.clubId];if(!c)return`<div class="panel empty"><strong>Club no encontrado</strong><button class="btn" data-act="tab" data-v="clubs">Ver clubs</button></div>`;
+  const dias=diasProx(7);const f=dias.includes(S.clubFecha)?S.clubFecha:dias[0];S.clubFecha=f;
+  const mio=esMiClub(c);const ed=mio&&S.editHorarios;const sl=slotsClub(c,f);
+  const tel=String(c.telefono||"").replace(/\D/g,"");const wa=tel.length===10?"52"+tel:tel;
+  const maps="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([c.nombre,c.direccion,c.ciudad].filter(Boolean).join(", "));
+  const dlab=d=>{const x=new Date(d+"T12:00");return{w:d===dias[0]?"Hoy":d===dias[1]?"Mañana":x.toLocaleDateString("es-MX",{weekday:"short"}).replace(".",""),n:x.getDate()}};
+  return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="clubs">← Clubs</button></div>
+  ${(c.fotos||[]).length?`<div class="fotos">${c.fotos.map(id=>`<img src="${fotoURL(id,1200)}" alt="Foto de ${esc(c.nombre)}" referrerpolicy="no-referrer" loading="lazy">`).join("")}</div>`:""}
+  <div class="panel stack"><h1>${esc(c.nombre)}</h1>
+    ${c.descripcion?`<p style="margin:0">${esc(c.descripcion)}</p>`:""}
+    <div class="row" style="gap:6px"><span class="chip">${c.canchas||1} cancha${(c.canchas||1)>1?"s":""}</span><span class="chip">${fmtCorta(c.apertura||"07:00")} – ${fmtCorta(c.cierre||"23:00")}</span><span class="chip">Turnos de ${c.turno||90} min</span></div>
+    ${c.direccion?`<div class="muted small">${esc([c.direccion,c.ciudad].filter(Boolean).join(", "))}</div>`:""}
+    <div class="acciones">${c.direccion?`<a class="btn" href="${maps}" target="_blank" rel="noopener">Cómo llegar</a>`:""}${wa?`<a class="btn wa" href="https://wa.me/${wa}?text=${encodeURIComponent("Hola, vi su club en La Reta y quiero apartar cancha.")}" target="_blank" rel="noopener">${WA_SVG}WhatsApp</a>`:""}
+    ${S.uid?`<button class="btn primary" data-act="retaEnClub" data-id="${esc(c.id)}">Crear reta aquí</button>`:""}</div>
+    ${mio?`<div class="acciones"><button class="btn ${ed?"ball":""}" data-act="editHorarios">${ed?"Listo":"Editar disponibilidad"}</button><button class="btn" data-act="tab" data-v="club">Editar club y fotos</button></div>`:""}
+  </div>
+  <div class="section-head"><h2>Horarios</h2><span class="muted small">${c.canchas||1} cancha${(c.canchas||1)>1?"s":""}</span></div>
+  <div class="days">${dias.map(d=>{const x=dlab(d);return`<button class="day ${d===f?"on":""}" data-act="clubFecha" data-v="${d}"><span>${esc(x.w)}</span><b>${x.n}</b></button>`}).join("")}</div>
+  ${ed?`<div class="banner">Toca un horario para marcarlo como ocupado o libre. Las retas de la app apartan sus canchas solas.</div>`:""}
+  <div class="leyenda"><span><i style="border-color:var(--ball);background:rgba(5,20,35,.8)"></i>Disponible</span><span><i style="border-color:rgba(255,255,255,.2);background:#111"></i>Ocupado</span><span><i style="border-color:var(--ball);background:var(--ball)"></i>Reta</span></div>
+  <div class="courts ${ed?"editando":""}">${sl.map((lista,i)=>{const lib=lista.filter(x=>x.est==="libre"&&!x.pas).length;
+    return`<div class="court-c"><span class="sl1"></span><span class="sl2"></span><span class="cl"></span><span class="net"></span><span class="nm">Cancha ${i+1}</span><span class="lib">${lib} libres</span>
+    <div class="slots">${lista.map(x=>`<button class="slot ${x.est} ${x.pas?"pasado":""}" ${x.est==="reta"&&x.retaId?`data-act="open" data-id="${esc(x.retaId)}"`:ed&&!x.pas&&x.est!=="reta"?`data-act="slot" data-c="${i+1}" data-h="${x.h}"`:`data-act="noop"`} aria-label="Cancha ${i+1}, ${fmtCorta(x.h)}, ${x.est}"><b>${fmtCorta(x.h).replace(" ","")}</b>${x.est!=="libre"?`<small>${esc(x.nota)}</small>`:""}</button>`).join("")}</div></div>`}).join("")}</div>
+  ${!mio&&S.uid?`<p class="muted small" style="margin:0">Los horarios los actualiza el club. Para apartar, escríbele por WhatsApp.</p>`:""}
+  </div>`;
+}
+async function comprimirFoto(file){
+  const url=URL.createObjectURL(file);
+  try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
+    const k=Math.min(1,1600/Math.max(img.width,img.height));const cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
+    cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);return cv.toDataURL("image/jpeg",.82).split(",")[1];}
+  finally{URL.revokeObjectURL(url)}
+}
+function vClub(){
+  if(!S.uid){S.afterReg="club";return vRegistro()}
+  const c=myClub()||{};if(!S.clubFotos)S.clubFotos=(c.fotos||[]).slice();
+  const opt=(v,a)=>`<option value="${v}" ${String(a)===String(v)?"selected":""}>${v} min</option>`;
+  return`<div class="stack"><div class="row between"><button class="btn ghost" data-act="tab" data-v="perfil">← Mi perfil</button>${c.id?`<button class="btn sm" data-act="verClub" data-id="${esc(c.id)}">Ver mi página</button>`:""}</div><h1>${c.id?"Mi club":"Registrar club"}</h1>
+  <form class="panel stack" data-form="club">
+    <div class="field"><label class="label" for="c-nom">Nombre del club</label><input id="c-nom" name="nombre" required value="${esc(c.nombre)}"></div>
+    <div class="field"><label class="label" for="c-desc">Descripción</label><textarea id="c-desc" name="descripcion" rows="2" maxlength="300" placeholder="Ej. 4 canchas techadas, iluminación LED, regaderas y cafetería">${esc(c.descripcion)}</textarea></div>
+    <div class="grid2"><div class="field"><label class="label" for="c-ciu">Ciudad</label><input id="c-ciu" name="ciudad" value="${esc(c.ciudad||"Tepic")}"></div>
+    <div class="field"><label class="label" for="c-can">Número de canchas</label><input id="c-can" name="canchas" type="number" min="1" max="20" value="${esc(c.canchas??2)}"></div></div>
+    <div class="field"><label class="label" for="c-dir">Dirección</label><input id="c-dir" name="direccion" value="${esc(c.direccion)}"></div>
+    <div class="grid3"><div class="field"><label class="label" for="c-ap">Abre</label><input id="c-ap" name="apertura" type="time" value="${esc(c.apertura||"07:00")}"></div>
+    <div class="field"><label class="label" for="c-ci">Cierra</label><input id="c-ci" name="cierre" type="time" value="${esc(c.cierre||"23:00")}"></div>
+    <div class="field"><label class="label" for="c-tu">Turnos de</label><select id="c-tu" name="turno">${opt(60,c.turno||90)}${opt(90,c.turno||90)}${opt(120,c.turno||90)}</select></div></div>
+    <div class="grid2"><div class="field"><label class="label" for="c-tel">WhatsApp / teléfono</label><input id="c-tel" name="telefono" type="tel" value="${esc(c.telefono)}"></div>
+    <div class="field"><label class="label" for="c-hor">Días</label><input id="c-hor" name="horario" value="${esc(c.horario)}" placeholder="Ej. Lun a Dom"></div></div>
+    <div class="field"><span class="label">Fotos del club (hasta 8)</span>
+      <div class="thumbs">${S.clubFotos.map((id,i)=>`<div class="thumb"><img src="${fotoURL(id,300)}" alt="" referrerpolicy="no-referrer"><button type="button" data-act="quitarFoto" data-i="${i}" aria-label="Quitar foto">×</button></div>`).join("")}</div>
+      ${S.clubFotos.length<8?`<input id="c-fotos" type="file" accept="image/*" multiple data-act="fotosClub">`:""}
+      <span class="muted small">Se reducen solas para que carguen rápido. Toca × para quitar una.</span></div>
+    <button class="btn primary" type="submit">${c.id?"Guardar cambios":"Registrar club"}</button></form></div>`}
+
 function vWelcome(){
   const nP=Object.keys(S.players).length,nR=Object.keys(S.retas).length,nC=Object.keys(S.clubs).length;const of=oficial();
   return`<div class="wel"><div><p class="big">Bienvenido</p><p class="muted" style="margin:6px 0 0">Retas, marcadores y ranking del pádel en Tepic. ${nP} jugadores, ${nC} clubs y ${nR} retas registradas.</p></div>
@@ -597,19 +733,6 @@ function vRegistro(){
     <div class="field"><label class="label" for="r-pin2">Repite el PIN</label><input id="r-pin2" name="pin2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" pattern="[0-9]{6}" required></div></div>
     <p class="muted small" style="margin:0">Con tu celular y este PIN entras desde cualquier teléfono. No uses fechas de cumpleaños ni números repetidos.</p>
     <button class="btn primary" type="submit">Crear mi cuenta</button></form></div>`}
-function vClub(){
-  if(!S.uid){S.afterReg="club";return vRegistro()}
-  const c=myClub()||{};
-  return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="perfil">← Mi perfil</button></div><h1>${c.id?"Mi club":"Registrar club"}</h1>
-  <form class="panel stack" data-form="club">
-    <div class="field"><label class="label" for="c-nom">Nombre del club</label><input id="c-nom" name="nombre" required value="${esc(c.nombre)}"></div>
-    <div class="grid2"><div class="field"><label class="label" for="c-ciu">Ciudad</label><input id="c-ciu" name="ciudad" value="${esc(c.ciudad||"Tepic")}"></div>
-    <div class="field"><label class="label" for="c-can">Número de canchas</label><input id="c-can" name="canchas" type="number" min="1" max="40" value="${esc(c.canchas??"")}"></div></div>
-    <div class="field"><label class="label" for="c-dir">Dirección</label><input id="c-dir" name="direccion" value="${esc(c.direccion)}"></div>
-    <div class="grid2"><div class="field"><label class="label" for="c-tel">Teléfono</label><input id="c-tel" name="telefono" type="tel" value="${esc(c.telefono)}"></div>
-    <div class="field"><label class="label" for="c-hor">Horario</label><input id="c-hor" name="horario" value="${esc(c.horario)}" placeholder="Ej. Lun a Dom 7:00–23:00"></div></div>
-    <button class="btn primary" type="submit">${c.id?"Guardar cambios":"Registrar club"}</button></form>
-  <h2>Clubs registrados</h2><div class="panel">${Object.values(S.clubs).sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"")).map(x=>`<div class="person"><div class="who"><div class="alias">${esc(x.nombre)}</div><div class="muted small">${[x.direccion,x.ciudad,x.canchas?x.canchas+" canchas":"",x.horario].filter(Boolean).map(esc).join(" · ")}${x.telefono?` · <span class="tel">${esc(x.telefono)}</span>`:""}</div></div></div>`).join("")||`<p class="muted" style="margin:0">Aún no hay clubs.</p>`}</div></div>`}
 function vPerfil(){
   if(!S.uid)return vWelcome();
   const p=S.players[S.uid]||{};const stats=computeStats();const st=stats[S.uid];
@@ -632,7 +755,7 @@ function vPerfil(){
     <div class="field"><label class="label" for="k-n2">Repite</label><input id="k-n2" name="nuevo2" type="password" inputmode="numeric" maxlength="6" required></div></div>
     <div class="row"><button class="btn primary" type="submit">Cambiar PIN</button><button class="btn" type="button" data-act="pinToggle">Cancelar</button></div></form>`
    :`<div><button class="btn sm" data-act="pinToggle">Cambiar mi PIN</button></div>`}
-  <div class="panel row between"><div><b>${c?esc(c.nombre):"¿Tienes un club?"}</b><div class="muted small">${c?"Tu club registrado":"Regístralo para que las retas se armen ahí"} · ${Object.keys(S.clubs).length} clubs en la app</div></div><button class="btn" data-act="tab" data-v="club">${c?"Editar club":"Registrar club"}</button></div>
+  <div class="panel row between"><div><b>${c?esc(c.nombre):"¿Tienes un club?"}</b><div class="muted small">${c?"Tu club registrado":"Regístralo para que las retas se armen ahí"} · ${Object.keys(S.clubs).length} clubs en la app</div></div><span class="row" style="gap:6px">${c?`<button class="btn" data-act="verClub" data-id="${esc(c.id)}">Ver página</button>`:""}<button class="btn" data-act="tab" data-v="club">${c?"Editar club":"Registrar club"}</button></span></div>
   ${S.isOwner?`<h2>Administración</h2>
   <div class="panel row between"><div><b>Patrocinadores</b><div class="muted small">${activeSpons().length} activos · solo tú puedes administrarlos</div></div><button class="btn" data-act="tab" data-v="patros">Administrar</button></div>
   <div class="panel row between"><div><b>Jugadores con cuenta</b><div class="muted small">Asigna PIN nuevo o bloquea cuentas</div></div><button class="btn" data-act="tab" data-v="cuentas">Ver cuentas</button></div>`:""}
@@ -730,6 +853,7 @@ function apply(d){
   S.retas=Object.fromEntries((d.retas||[]).map(r=>[r.id,r]));
   S.scores=Object.fromEntries((d.marcadores||[]).map(m=>[m.id,m]));
   S.multas=Object.fromEntries((d.multas||[]).map(m=>[m.id,m]));
+  S.bloqueos=d.bloqueos||[];
   S.sponsors=Object.fromEntries((d.patrocinadores||[]).map(p=>[p.id,p]));
   const av=d.avisos||[];
   if(S.uid&&S.avisosVistos){av.filter(a=>!a.leido&&!S.avisosVistos.has(a.id)).slice(0,3).forEach(notificar)}
@@ -756,11 +880,21 @@ function setIns(r,lista,msg){S.retas[r.id]={...r,jugadores:lista};S.keepScroll=t
 
 document.addEventListener("click",async e=>{
   const t=e.target.closest("[data-act]");if(!t||t.tagName==="INPUT")return;const a=t.dataset.act;
-  if(a==="tab"){const v=t.dataset.v;if(v==="cuentas"){S.cuentas=null;call("jugadoresAdmin").then(l=>{S.cuentas=l;S.keepScroll=true;render()}).catch(er=>flash(er.message))}
+  if(a==="tab"){const v=t.dataset.v;if(v==="club")S.clubFotos=null;if(v==="cuentas"){S.cuentas=null;call("jugadoresAdmin").then(l=>{S.cuentas=l;S.keepScroll=true;render()}).catch(er=>flash(er.message))}
     if((v==="perfil"||v==="club")&&!S.uid&&v!=="club")return go("inicio");return go(v)}
   if(a==="skip"){S.welcomed=true;return go("retas")}
   if(a==="entrarReta"){S.volverReta=S.retaId;return go("inicio")}
   if(a==="noop")return;
+  if(a==="verClub"){S.editHorarios=false;return go("clubPub",{clubId:t.dataset.id})}
+  if(a==="clubFecha"){S.clubFecha=t.dataset.v;S.keepScroll=true;return render()}
+  if(a==="editHorarios"){S.editHorarios=!S.editHorarios;S.keepScroll=true;return render()}
+  if(a==="retaEnClub"){const c=S.clubs[t.dataset.id];const d=newDraft();d.clubTexto=c.nombre;d.canchas=Math.min(d.canchas,c.canchas||d.canchas);if(S.clubFecha)d.fecha=S.clubFecha;return go("nueva",{draft:d})}
+  if(a==="quitarFoto"){S.clubFotos.splice(+t.dataset.i,1);S.keepScroll=true;return render()}
+  if(a==="slot"){const c=S.clubs[S.clubId];const k=+t.dataset.c,h=t.dataset.h,f=S.clubFecha;
+    const i=(S.bloqueos||[]).findIndex(b=>b.clubId===c.id&&b.fecha===f&&+b.cancha===k&&b.hora===h);const ocupar=i<0;
+    if(ocupar)S.bloqueos.push({clubId:c.id,fecha:f,cancha:k,hora:h,nota:"Ocupado"});else S.bloqueos.splice(i,1);
+    S.keepScroll=true;render();
+    return call("bloqueo",{clubId:c.id,fecha:f,cancha:k,hora:h,ocupado:ocupar}).then(()=>{S.version=""}).catch(er=>{flash(er.message);refresh(true)})}
   if(a==="compartir"){S.compartir=S.compartir===S.retaId?null:S.retaId;S.keepScroll=true;return render()}
   if(a==="copiar"){const r=S.retas[S.retaId];const t=textoReta(S.retaId,r);try{await navigator.clipboard.writeText(t);flash("Texto copiado. Pégalo en tu grupo.")}catch(er){const el=document.getElementById("txt-compartir");const rg=document.createRange();rg.selectNodeContents(el);const sel=getSelection();sel.removeAllRanges();sel.addRange(rg);flash("Mantén presionado para copiar")}return}
   if(a==="masApps"){const r=S.retas[S.retaId];try{await navigator.share({title:"Reta de pádel",text:textoReta(S.retaId,r)})}catch(er){}return}
@@ -803,6 +937,9 @@ document.addEventListener("click",async e=>{
 document.addEventListener("change",e=>{
   const t=e.target;
   if(t.closest("form[data-form='reta']")&&t.type!=="text"&&t.name!=="extra"&&t.name!=="clubTexto"&&t.name!=="castigo"){readDraft(t.closest("form"));S.keepScroll=true;t.blur();render();return}
+  if(t.dataset.act==="fotosClub"&&t.files&&t.files.length){const fs=[...t.files].slice(0,8-S.clubFotos.length);t.value="";const c=myClub();
+    (async()=>{for(const f of fs){try{flash("Subiendo foto…");const b64=await comprimirFoto(f);const r=await call("subirImagen",{para:"club",clubId:c?c.id:"",tipo:"image/jpeg",base64:b64});S.clubFotos.push(r.imagenId);S.keepScroll=true;document.activeElement?.blur();render()}catch(er){flash(er.message||"No se pudo subir la foto.")}}
+      flash(myClub()?"Fotos listas. Toca Guardar cambios.":"Primero registra tu club y luego agrega fotos.")})();return}
   if(t.dataset.act==="sponimg"&&t.files&&t.files[0]){const f=t.files[0];if(f.size>1048576){t.value="";return flash("La imagen pesa más de 1 MB. Redúcela e intenta de nuevo.")}
     const rd=new FileReader();rd.onload=()=>{const b64=String(rd.result).split(",")[1];flash("Subiendo imagen…");
       call("subirImagen",{tipo:f.type,base64:b64}).then(r=>{S.sponImg=r.imagenId;S.keepScroll=true;document.activeElement?.blur();render();flash("Imagen lista. Guarda para aplicarla.")}).catch(er=>flash(er.message))};
@@ -836,7 +973,8 @@ document.addEventListener("submit",async e=>{
   if(kind==="pin"){if(!/^\d{6}$/.test(g("nuevo")))return flash("El PIN nuevo debe ser de 6 números.");if(g("nuevo")!==g("nuevo2"))return flash("Los PIN nuevos no coinciden.");
     const r=await act("cambiarPin",{actual:g("actual"),nuevo:g("nuevo")});if(r){S.showPin=false;render();flash("PIN cambiado")}return}
   if(kind==="club"){if(!g("nombre"))return flash("Escribe el nombre del club.");
-    return act("club",{nombre:g("nombre"),ciudad:g("ciudad"),direccion:g("direccion"),canchas:+fd.get("canchas")||null,telefono:g("telefono"),horario:g("horario")},"Club guardado")}
+    const cc=myClub();const r=await act("club",{id:cc?cc.id:"",nombre:g("nombre"),descripcion:g("descripcion"),ciudad:g("ciudad"),direccion:g("direccion"),canchas:+fd.get("canchas")||1,telefono:g("telefono"),horario:g("horario"),apertura:g("apertura"),cierre:g("cierre"),turno:+fd.get("turno")||90,fotos:S.clubFotos||[]},"Club guardado");
+    if(r){S.clubFotos=null;go("clubPub",{clubId:r.id})}return}
   if(kind==="spon"){const data={id:S.editSpon==="new"?"":S.editSpon,nombre:g("nombre"),giro:g("giro"),paquete:g("paquete"),cancha:+fd.get("cancha")||null,cuota:+fd.get("cuota")||0,
       forma:g("forma"),color:g("color"),tinta:g("tinta"),siglas:g("siglas").toUpperCase(),contacto:g("contacto"),premio:g("premio"),lema:g("lema"),activo:fd.get("activo")==="on"};
     const prev=S.editSpon!=="new"?(S.sponsors[S.editSpon]||{}).imagenId:"";data.imagenId=S.sponImg!==undefined?S.sponImg:(prev||"");

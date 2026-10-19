@@ -14,7 +14,8 @@ var VERSION_APP = 'La Reta 1.0';
 var HOJAS = {
   JUGADORES: ['id', 'celular', 'nombre', 'apellido', 'alias', 'salt', 'hash', 'rol', 'estado', 'creado', 'actualizado'],
   SESIONES: ['token', 'jugadorId', 'creado', 'ultimo'],
-  CLUBS: ['id', 'ownerId', 'nombre', 'ciudad', 'direccion', 'canchas', 'telefono', 'horario', 'creado', 'actualizado'],
+  CLUBS: ['id', 'ownerId', 'nombre', 'ciudad', 'direccion', 'canchas', 'telefono', 'horario', 'creado', 'actualizado', 'apertura', 'cierre', 'turno', 'fotos', 'descripcion'],
+  BLOQUEOS: ['id', 'clubId', 'fecha', 'cancha', 'hora', 'nota', 'porId', 'creado'],
   RETAS: ['id', 'creadorId', 'fecha', 'hora', 'club', 'canchas', 'maxJugadores', 'tipo', 'puntos', 'modo', 'reglas', 'castigo', 'jugadores', 'partidos', 'creado'],
   MARCADORES: ['id', 'retaId', 'matchId', 'a', 'b', 'porId', 'actualizado'],
   MULTAS: ['id', 'retaId', 'jugadorId', 'n'],
@@ -22,8 +23,8 @@ var HOJAS = {
   AVISOS: ['id', 'paraId', 'tipo', 'texto', 'retaId', 'deId', 'creado', 'leido'],
   PATROCINADORES: ['id', 'nombre', 'giro', 'paquete', 'cancha', 'cuota', 'forma', 'color', 'tinta', 'siglas', 'contacto', 'premio', 'lema', 'imagenId', 'activo', 'actualizado']
 };
-var JSON_COLS = { reglas: 1, jugadores: 1, partidos: 1 };
-var NUM_COLS = { canchas: 1, maxJugadores: 1, puntos: 1, a: 1, b: 1, n: 1, cancha: 1, cuota: 1 };
+var JSON_COLS = { reglas: 1, jugadores: 1, partidos: 1, fotos: 1 };
+var NUM_COLS = { canchas: 1, maxJugadores: 1, puntos: 1, a: 1, b: 1, n: 1, cancha: 1, cuota: 1, turno: 1 };
 var SESION_DIAS = 120;
 var MAX_FALLOS = 5;
 var BLOQUEO_SEG = 900;
@@ -52,7 +53,7 @@ function doPost(e) {
 /** Punto único de entrada desde la app. */
 function api(token, accion, datos) {
   try {
-    CACHE_TABLAS_ = {};
+    CACHE_TABLAS_ = {}; ENCABEZADO_OK_ = {};
     datos = datos || {};
     if (accion === 'registro') return ok_(registro_(datos));
     if (accion === 'entrar') return ok_(entrar_(datos));
@@ -70,6 +71,7 @@ function api(token, accion, datos) {
       perfil: function () { return guardarPerfil_(yo, datos); },
       cambiarPin: function () { return cambiarPin_(yo, datos); },
       club: function () { return guardarClub_(yo, datos); },
+      bloqueo: function () { return bloqueo_(yo, datos); },
       crearReta: function () { return crearReta_(yo, datos); },
       inscritos: function () { return inscritos_(yo, datos); },
       partidos: function () { return guardarPartidos_(yo, datos); },
@@ -109,10 +111,19 @@ function hoja_(nombre) {
     h.setFrozenRows(1);
   }
   if (!h) falla_('Falta la hoja ' + nombre + '. Ejecuta instalar().');
+  if (HOJAS[nombre] && !ENCABEZADO_OK_[nombre]) {
+    var cols2 = HOJAS[nombre], cab = h.getRange(1, 1, 1, cols2.length).getDisplayValues()[0];
+    if (cab.join('|') !== cols2.join('|')) {
+      h.getRange(1, 1, 1, cols2.length).setValues([cols2]).setFontWeight('bold').setBackground('#0a0d00').setFontColor('#d4ff1f');
+      if (h.getMaxRows() > 1) h.getRange(2, 1, h.getMaxRows() - 1, cols2.length).setNumberFormat('@');
+    }
+    ENCABEZADO_OK_[nombre] = 1;
+  }
   return h;
 }
 
 var CACHE_TABLAS_ = {};
+var ENCABEZADO_OK_ = {};
 function tabla_(nombre) {
   if (CACHE_TABLAS_[nombre]) return CACHE_TABLAS_[nombre];
   var h = hoja_(nombre), cols = HOJAS[nombre];
@@ -319,6 +330,7 @@ function todo_(yo, versionCliente) {
     admin: admin,
     jugadores: jug.map(function (j) { return publicoJugador_(j, yo); }),
     clubs: tabla_('CLUBS').map(limpio_),
+    bloqueos: bloqueosVigentes_(),
     retas: tabla_('RETAS').map(limpio_),
     marcadores: tabla_('MARCADORES').map(function (m) { return { id: m.id, retaId: m.retaId, matchId: m.matchId, a: m.a, b: m.b }; }),
     multas: tabla_('MULTAS').map(limpio_),
@@ -346,18 +358,56 @@ function guardarPerfil_(yo, d) {
   });
 }
 
+function horaValida_(h, def) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(h || '')) ? String(h) : def; }
+function clubDe_(yo, clubId) {
+  var t = tabla_('CLUBS');
+  for (var i = 0; i < t.length; i++) if ((clubId && t[i].id === clubId && (t[i].ownerId === yo.id || esAdmin_(yo))) || (!clubId && t[i].ownerId === yo.id)) return t[i];
+  return null;
+}
 function guardarClub_(yo, d) {
   return conCandado_(function () {
     var nombre = texto_(d.nombre, 60);
     if (!nombre) falla_('Escribe el nombre del club.');
-    var prev = null, t = tabla_('CLUBS');
-    for (var i = 0; i < t.length; i++) if (t[i].ownerId === yo.id) prev = t[i];
+    var prev = clubDe_(yo, d.id || '');
+    if (d.id && !prev) falla_('Solo el dueño del club puede editarlo.');
     var c = prev || { id: nuevoId_('c'), ownerId: yo.id, creado: ahora_() };
-    c.nombre = nombre; c.ciudad = texto_(d.ciudad, 40); c.direccion = texto_(d.direccion, 100);
-    c.canchas = Math.max(0, Math.min(40, Number(d.canchas) || 0)) || null;
-    c.telefono = texto_(d.telefono, 20); c.horario = texto_(d.horario, 60); c.actualizado = ahora_();
+    c.nombre = nombre; c.ciudad = texto_(d.ciudad, 40); c.direccion = texto_(d.direccion, 120);
+    c.canchas = Math.max(1, Math.min(20, Number(d.canchas) || 1));
+    c.telefono = texto_(d.telefono, 20); c.horario = texto_(d.horario, 60);
+    c.apertura = horaValida_(d.apertura, '07:00'); c.cierre = horaValida_(d.cierre, '23:00');
+    if (c.cierre <= c.apertura) falla_('La hora de cierre debe ser después de la de apertura.');
+    c.turno = [60, 90, 120].indexOf(Number(d.turno)) >= 0 ? Number(d.turno) : 90;
+    c.descripcion = texto_(d.descripcion, 300);
+    c.fotos = (d.fotos || []).filter(function (x) { return /^[A-Za-z0-9_-]{10,}$/.test(x); }).slice(0, 8);
+    c.actualizado = ahora_();
     guardar_('CLUBS', c);
     return limpio_(c);
+  });
+}
+function hoyMx_() { return Utilities.formatDate(new Date(), 'America/Mazatlan', 'yyyy-MM-dd'); }
+function bloqueosVigentes_() {
+  var hoy = hoyMx_();
+  return tabla_('BLOQUEOS').filter(function (b) { return b.fecha >= hoy; })
+    .map(function (b) { return { id: b.id, clubId: b.clubId, fecha: b.fecha, cancha: b.cancha, hora: b.hora, nota: b.nota }; });
+}
+function bloqueo_(yo, d) {
+  return conCandado_(function () {
+    var c = clubDe_(yo, d.clubId);
+    if (!c) falla_('Solo el club puede cambiar sus horarios.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.fecha))) falla_('Fecha no válida.');
+    var cancha = Number(d.cancha), hora = horaValida_(d.hora, '');
+    if (!(cancha >= 1 && cancha <= (c.canchas || 1)) || !hora) falla_('Horario no válido.');
+    var id = c.id + '_' + d.fecha + '_' + cancha + '_' + hora.replace(':', '');
+    var prev = buscar_('BLOQUEOS', id);
+    if (d.ocupado) {
+      guardar_('BLOQUEOS', { id: id, clubId: c.id, fecha: d.fecha, cancha: cancha, hora: hora, nota: texto_(d.nota, 40), porId: yo.id, creado: ahora_() });
+    } else if (prev) {
+      borrar_('BLOQUEOS', id);
+    }
+    var hoy = hoyMx_();
+    var viejos = tabla_('BLOQUEOS').filter(function (b) { return b.fecha < hoy; }).map(function (b) { return b._fila; }).sort(function (a, b) { return b - a; });
+    if (viejos.length > 50) { viejos.forEach(function (f) { hoja_('BLOQUEOS').deleteRow(f); }); delete CACHE_TABLAS_.BLOQUEOS; tocar_(); }
+    return true;
   });
 }
 
@@ -577,12 +627,13 @@ function carpetaImagenes_() {
 }
 
 function subirImagen_(yo, d) {
-  soloAdmin_(yo);
+  var deClub = d.para === 'club';
+  if (deClub) { if (!clubDe_(yo, d.clubId || '')) falla_('Primero registra tu club.'); } else soloAdmin_(yo);
   var tipos = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
   if (!tipos[d.tipo]) falla_('Sube la imagen en JPG, PNG o WEBP.');
   var bytes = Utilities.base64Decode(String(d.base64 || ''));
-  if (bytes.length > 1048576) falla_('La imagen pesa más de 1 MB.');
-  var blob = Utilities.newBlob(bytes, d.tipo, 'banner_' + Date.now() + '.' + tipos[d.tipo]);
+  if (bytes.length > 1572864) falla_('La imagen pesa más de 1.5 MB.');
+  var blob = Utilities.newBlob(bytes, d.tipo, (deClub ? 'club_' : 'banner_') + Date.now() + '.' + tipos[d.tipo]);
   var f = carpetaImagenes_().createFile(blob);
   f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   return { imagenId: f.getId() };

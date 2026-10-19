@@ -325,19 +325,33 @@ const retaOrder=([,a],[,b])=>((b.fecha||"")+(b.hora||"")).localeCompare((a.fecha
 
 /* ---------- sorteos ---------- */
 function sortearRoyal(ids,canchas,rondas){
-  const courts=Math.min(canchas,Math.floor(ids.length/4));const played={},partner={},opp={};ids.forEach(i=>played[i]=0);
-  const k=(a,b)=>a<b?a+"|"+b:b+"|"+a;const out=[];
-  for(let r=1;r<=rondas;r++){
-    const pool=shuffle(ids.slice()).sort((a,b)=>played[a]-played[b]);
-    const playing=pool.slice(0,courts*4);let best=playing,bs=Infinity;
-    for(let t=0;t<400;t++){const p=shuffle(playing.slice());let sc=0;
-      for(let c=0;c<courts;c++){const[a,b,x,y]=p.slice(c*4,c*4+4);sc+=((partner[k(a,b)]||0)+(partner[k(x,y)]||0))*10;for(const i of[a,b])for(const j of[x,y])sc+=opp[k(i,j)]||0}
-      if(sc<bs){bs=sc;best=p;if(!sc)break}}
-    for(let c=0;c<courts;c++){const[a,b,x,y]=best.slice(c*4,c*4+4);
-      out.push({id:"r"+r+"c"+(c+1),ronda:r,cancha:c+1,a:[a,b],b:[x,y]});
-      [a,b,x,y].forEach(i=>played[i]++);partner[k(a,b)]=(partner[k(a,b)]||0)+1;partner[k(x,y)]=(partner[k(x,y)]||0)+1;
-      for(const i of[a,b])for(const j of[x,y])opp[k(i,j)]=(opp[k(i,j)]||0)+1}
-  }return out;
+  const courts=Math.max(1,Math.min(canchas,Math.floor(ids.length/4)));const k=(a,b)=>a<b?a+"|"+b:b+"|"+a;
+  const una=()=>{const played={},partner={},opp={},rest={};ids.forEach(i=>{played[i]=0;rest[i]=-9});const out=[];let costo=0;
+    for(let r=1;r<=rondas;r++){
+      const pref=Math.random()<.6;const pool=shuffle(ids.slice()).sort((a,b)=>(played[a]-played[b])||(pref?((rest[b]===r-1)-(rest[a]===r-1)):0));
+      const playing=pool.slice(0,courts*4);pool.slice(courts*4).forEach(i=>{if(rest[i]===r-1)costo+=30;rest[i]=r});
+      let best=playing,bs=Infinity;
+      for(let t=0;t<600;t++){const p=shuffle(playing.slice());let sc=0;
+        for(let c=0;c<courts;c++){const[a,b,x,y]=p.slice(c*4,c*4+4);sc+=((partner[k(a,b)]||0)+(partner[k(x,y)]||0))*100;for(const i of[a,b])for(const j of[x,y])sc+=opp[k(i,j)]||0}
+        if(sc<bs){bs=sc;best=p;if(!sc)break}}
+      costo+=bs;
+      for(let c=0;c<courts;c++){const[a,b,x,y]=best.slice(c*4,c*4+4);
+        out.push({id:"r"+r+"c"+(c+1),ronda:r,cancha:c+1,a:[a,b],b:[x,y]});
+        [a,b,x,y].forEach(i=>played[i]++);partner[k(a,b)]=(partner[k(a,b)]||0)+1;partner[k(x,y)]=(partner[k(x,y)]||0)+1;
+        for(const i of[a,b])for(const j of[x,y])opp[k(i,j)]=(opp[k(i,j)]||0)+1}}
+    const v=Object.values(played);costo+=(Math.max(...v)-Math.min(...v))*1000;return{out,costo}};
+  let mejor=null;for(let t=0;t<60;t++){const x=una();if(!mejor||x.costo<mejor.costo)mejor=x;if(mejor.costo===0)break}
+  return mejor.out;
+}
+function minPartido(r){return Math.round(r.modo==="total"?(r.puntos||24)*.85:(r.puntos||21)*1.5)}
+function fmtDur(min){min=Math.round(min/5)*5;const h=Math.floor(min/60),m=min%60;return h?(h+" h"+(m?" "+m+" min":"")):m+" min"}
+function opcionesRondas(n,canchas){
+  const courts=Math.max(1,Math.min(canchas,Math.floor(n/4)));const slots=courts*4;const o=[];
+  for(let R=1;R<=16;R++){const tot=R*slots;const min=Math.floor(tot/n),max=Math.ceil(tot/n);o.push({R,parejo:tot%n===0,min,max,extra:tot%n})}
+  const parejas=o.filter(x=>x.parejo&&x.min>=3&&x.min<=7);
+  let def=parejas.length?parejas.reduce((a,b)=>Math.abs(b.min-4.5)<Math.abs(a.min-4.5)?b:a):o.reduce((a,b)=>Math.abs((b.min+b.max)/2-4.5)<Math.abs((a.min+a.max)/2-4.5)?b:a);
+  if(slots===n)def=o[Math.min(n-1,8)-1]||def;
+  return{o,def:def.R,courts};
 }
 function sortearFija(pairs,canchas){
   let P=pairs.map((_,i)=>i);if(P.length%2)P.push(-1);const m=P.length;const rounds=[];
@@ -515,11 +529,15 @@ function vReta(){
   }
   if(W&&!ps.length){
     const ok=fija?(ins.length>=4&&ins.length%2===0):ins.length>=4;
-    const defR=Math.max(3,Math.min(ins.length-1,8));
+    const OR=opcionesRondas(ins.length,r.canchas);if(!S.rondasSel||S.rondasRid!==id){S.rondasSel=OR.def;S.rondasRid=id}
+    const sel=OR.o.find(x=>x.R===S.rondasSel)||OR.o[OR.def-1];const mp=minPartido(r);
+    const nPar=Math.floor(ins.length/2),rFija=nPar%2?nPar:nPar-1,mFija=nPar*(nPar-1)/2,rondasFija=Math.ceil(mFija/Math.max(1,Math.min(r.canchas,Math.floor(nPar/2))))*1;
     h+=`<div class="panel stack"><h3>Sorteo de partidos</h3>
-      ${fija?`<p class="muted small" style="margin:0">Todas las parejas juegan contra todas, repartidas en ${r.canchas} cancha${r.canchas>1?"s":""}.</p>`:
-      `<div class="field" style="max-width:200px"><label class="label" for="rondas">Rondas</label><input id="rondas" type="number" min="1" max="30" value="${defR}"></div>
-       <p class="muted small" style="margin:0">El sorteo evita repetir compañero y reparte los descansos.</p>`}
+      ${fija?`<p class="muted small" style="margin:0">Todas las parejas juegan contra todas: ${mFija} partidos en ${r.canchas} cancha${r.canchas>1?"s":""}${ins.length>=4?` · unos ${fmtDur(rondasFija*mp)}`:""}.</p>`:
+      `<div class="field"><label class="label" for="rondas">Rondas</label><select id="rondas" data-act="rondasSel">${(()=>{const op=x=>`<option value="${x.R}" ${x.R===sel.R?"selected":""}>${x.R} ronda${x.R>1?"s":""} · ${x.parejo?`cada quien juega ${x.min}`:`juegan ${x.min} o ${x.max}`} · ~${fmtDur(x.R*mp)}</option>`;
+        return`<optgroup label="Parejas (todos juegan igual)">${OR.o.filter(x=>x.parejo&&x.min>=1&&x.min<=8).map(op).join("")}</optgroup><optgroup label="Disparejas">${OR.o.filter(x=>!x.parejo&&x.R<=12&&x.min>=1).map(op).join("")}</optgroup>`})()}</select></div>
+       ${sel.parejo?`<p class="muted small" style="margin:0">Todos juegan ${sel.min} partidos${OR.courts*4<ins.length?` y descansan ${sel.R-sel.min}`:""}. El sorteo evita repetir compañero y que alguien descanse dos rondas seguidas.</p>`
+        :`<div class="banner" style="border-left:3px solid var(--bad)">Con ${sel.R} rondas, ${sel.extra} jugador${sel.extra>1?"es":""} jugaría${sel.extra>1?"n":""} un partido más que los demás. Para que salga parejo elige ${OR.o.filter(x=>x.parejo&&x.R<=16).slice(0,3).map(x=>x.R).join(", ")} rondas.</div>`}`}
       <button class="btn ball" data-act="sortear" ${ok?"":"disabled"}>Sortear partidos</button>
       ${ok?"":`<p class="muted small" style="margin:0">${fija?"Se necesitan al menos 2 parejas completas.":"Se necesitan al menos 4 jugadores."}</p>`}</div>`;
   }
@@ -537,8 +555,8 @@ function vReta(){
       h+=`</div></div>`;
     }
     const tb=retaTable(id,r);
-    h+=`<h2>Tabla de la reta</h2>${oficial()?.premio?`<div class="premio">Premio al primer lugar: ${esc(oficial().premio)}, cortesía de ${esc(oficial().nombre)}</div>`:""}<div class="panel tbl-wrap"><table><thead><tr><th>#</th><th>${fija?"Pareja":"Jugador"}</th><th>PJ</th><th>PG</th><th>Pts</th><th>Dif</th></tr></thead><tbody>
-      ${tb.map((x,i)=>`<tr class="${i===0&&x.pj?"first":""}"><td class="pos">${i+1}</td><td>${x.ids.map(p=>esc(pname(p))).join(" / ")}</td><td>${x.pj}</td><td>${x.pg}</td><td>${x.pf}</td><td class="${x.pf-x.pc>0?"up":x.pf-x.pc<0?"down":""}">${x.pf-x.pc>0?"+":""}${x.pf-x.pc}</td></tr>`).join("")}
+    h+=`<h2>Tabla de la reta</h2>${oficial()?.premio?`<div class="premio">Premio al primer lugar: ${esc(oficial().premio)}, cortesía de ${esc(oficial().nombre)}</div>`:""}<div class="panel tbl-wrap"><table><thead><tr><th>#</th><th>${fija?"Pareja":"Jugador"}</th><th>PJ</th><th>PG</th><th>Pts</th><th>Prom</th><th>Dif</th></tr></thead><tbody>
+      ${tb.map((x,i)=>`<tr class="${i===0&&x.pj?"first":""}"><td class="pos">${i+1}</td><td>${x.ids.map(p=>esc(pname(p))).join(" / ")}</td><td>${x.pj}</td><td>${x.pg}</td><td>${x.pf}</td><td>${x.pj?(x.pf/x.pj).toFixed(1):"–"}</td><td class="${x.pf-x.pc>0?"up":x.pf-x.pc<0?"down":""}">${x.pf-x.pc>0?"+":""}${x.pf-x.pc}</td></tr>`).join("")}
     </tbody></table>${(r.reglas||[]).some(x=>/primer lugar/i.test(x))&&st.label==="Terminada"&&tb[0]?`<p class="small" style="margin:10px 0 0"><b>${tb[0].ids.map(p=>esc(pname(p))).join(" y ")}</b> no paga cancha.</p>`:""}</div>`;
   }
   if(ins.length){
@@ -961,7 +979,7 @@ document.addEventListener("click",async e=>{
   if(a==="swap"){const ins=r.jugadores.slice();const i=+t.dataset.i;const full=ins.length-(ins.length%2);const k=(i+2)%full;[ins[i],ins[k]]=[ins[k],ins[i]];return setIns(r,ins)}
   if(a==="mixPairs")return setIns(r,shuffle(r.jugadores.slice()));
   if(a==="sortear"){const ins=r.jugadores||[];let ps;
-    if(r.tipo==="fija")ps=sortearFija(pairsOf(ins),r.canchas);else ps=sortearRoyal(ins,r.canchas,Math.max(1,+document.getElementById("rondas")?.value||4));
+    if(r.tipo==="fija")ps=sortearFija(pairsOf(ins),r.canchas);else ps=sortearRoyal(ins,r.canchas,Math.max(1,S.rondasSel||+document.getElementById("rondas")?.value||4));
     S.keepScroll=true;return act("partidos",{retaId:rid,partidos:ps},"Partidos sorteados")}
   if(a==="resortear"){S.keepScroll=true;return act("partidos",{retaId:rid,partidos:[]})}
   if(a==="multa"){const pid=t.dataset.id;const k=scoreKey(rid,pid);const cambio=+t.dataset.d;const n=Math.max(0,((S.multas[k]||{}).n||0)+cambio);S.multas[k]={id:k,retaId:rid,jugadorId:pid,n};S.keepScroll=true;render();
@@ -980,6 +998,7 @@ document.addEventListener("change",e=>{
       call("subirImagen",{tipo:f.type,base64:b64}).then(r=>{S.sponImg=r.imagenId;S.keepScroll=true;document.activeElement?.blur();render();flash("Imagen lista. Guarda para aplicarla.")}).catch(er=>flash(er.message))};
     rd.readAsDataURL(f);return}
   const sf=t.closest("form[data-form='spon']");if(sf){const svg=sf.querySelector("svg");if(svg){const fd=new FormData(sf);svg.outerHTML=logoSVG({nombre:fd.get("nombre"),siglas:fd.get("siglas"),forma:fd.get("forma"),color:fd.get("color"),tinta:fd.get("tinta")},56)}return}
+  if(t.dataset.act==="rondasSel"){S.rondasSel=+t.value;S.keepScroll=true;t.blur();return render()}
   if(t.dataset.act==="rkModo"){S.rkModo=t.value;try{localStorage.setItem("lareta_rk",t.value)}catch(er){}S.keepScroll=true;t.blur();return render()}
   const a=t.dataset.act;const rid=S.retaId,r=S.retas[rid];if(!r||!S.uid)return;
   if(a==="ins"){let ins=(r.jugadores||[]).slice();const id=t.dataset.id;

@@ -1,5 +1,5 @@
 /* La Reta: guarda la app en el celular para que abra rápido; los datos siempre vienen del servidor. */
-const VERSION = 'lareta-v9';
+const VERSION = 'lareta-v10';
 const API_URL = 'https://script.google.com/macros/s/AKfycbz_vNGis8Z6NjIQAlXmCfak4rjexlT6C0Gu9oUy11U3eRSNObG5s55dEdAz0UhJkChtKg/exec';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/badge-96.png',
   'fonts/barlow-condensed-latin-600-normal.woff2', 'fonts/barlow-condensed-latin-700-normal.woff2', 'fonts/barlow-condensed-latin-800-normal.woff2',

@@ -130,6 +130,16 @@ tr.first .pos{color:var(--ball);text-shadow:var(--glow)}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--head);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
 nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(2,1fr)}
+.hd-r{display:flex;align-items:center;gap:10px;min-width:0}
+.bell{position:relative;appearance:none;border:1px solid var(--line);background:transparent;color:var(--ink);width:42px;height:42px;border-radius:50%;display:grid;place-items:center;cursor:pointer;flex:none}
+.bell svg{width:22px;height:22px}
+.bell.on{border-color:var(--ball);color:var(--ball);box-shadow:var(--glow)}
+.bell .n{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font:700 12px/20px var(--f-body);text-align:center}
+.av{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;padding:14px 0;border-top:1px solid var(--line);text-align:left;width:100%;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;font:inherit;cursor:pointer}
+.av:first-child{border-top:0}
+.av .dot{width:10px;height:10px;border-radius:50%;margin-top:7px;background:transparent}
+.av.nuevo .dot{background:var(--ball);box-shadow:var(--glow)}
+.av.nuevo .tx{font-weight:600}
 .me-btn{appearance:none;border:1px solid var(--ball);background:transparent;color:var(--ball);border-radius:999px;padding:7px 14px;font-weight:600;cursor:pointer;max-width:55vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .spons{border-bottom:1px solid var(--line);overflow:hidden;position:relative;height:44px}
 .spons .track{display:flex;gap:28px;align-items:center;height:44px;width:max-content;padding-inline:14px}
@@ -201,7 +211,8 @@ img{max-width:100%}
 </head><body>
 <header class="top"><div class="wrap">
   <div class="brand">La Reta</div>
-  <button class="me-btn" id="who" data-act="tab" data-v="perfil">Mi perfil</button>
+  <div class="hd-r"><button class="bell" id="bell" data-act="tab" data-v="avisos" aria-label="Avisos" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="n" id="bellN" hidden></span></button>
+  <button class="me-btn" id="who" data-act="tab" data-v="perfil">Mi perfil</button></div>
 </div></header>
 <main class="wrap" id="main"><div class="empty"><strong>Cargando</strong>Conectando con las retas…</div></main>
 <nav class="tabs" aria-label="Secciones"><div class="spons" id="spons" aria-label="Patrocinadores"></div><div class="in">
@@ -330,7 +341,11 @@ function render(){
   document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===(S.view==="reta"||S.view==="nueva"?"retas":S.view)));
   const me=S.uid&&S.players[S.uid];const wb=document.getElementById("who");if(wb){wb.textContent=me?(me.alias||me.nombre):"Entrar";wb.dataset.v=me?"perfil":"inicio"}
   document.body.classList.toggle("welcome",S.view==="inicio"||S.view==="registro");
-  const v={inicio:vWelcome,registro:vRegistro,club:vClub,retas:vRetas,nueva:vNueva,reta:vReta,perfil:vPerfil,ranking:vRanking,patros:vPatros,cuentas:vCuentas}[S.view]||vRetas;
+  const nb=(S.avisos||[]).filter(a=>!a.leido).length;const bl=document.getElementById("bell");
+  if(bl){bl.hidden=!S.uid;bl.classList.toggle("on",nb>0);const bn=document.getElementById("bellN");bn.hidden=!nb;bn.textContent=nb>9?"9+":nb}
+  try{if(navigator.setAppBadge){nb?navigator.setAppBadge(nb):navigator.clearAppBadge()}}catch(e){}
+  if(S.view==="avisos"&&!S.uid)S.view="inicio";
+  const v={avisos:vAvisos,inicio:vWelcome,registro:vRegistro,club:vClub,retas:vRetas,nueva:vNueva,reta:vReta,perfil:vPerfil,ranking:vRanking,patros:vPatros,cuentas:vCuentas}[S.view]||vRetas;
   const y=window.scrollY;main.innerHTML=v();
   if(S.keepScroll)window.scrollTo(0,y);S.keepScroll=false;
 }
@@ -486,6 +501,22 @@ function myClub(){return S.uid?Object.values(S.clubs).find(c=>c.ownerId===S.uid)
 function puedeOrg(r){return !!S.uid&&(S.isOwner||r.creadorId===S.uid||(r.jugadores||[]).includes(S.uid))}
 function esCreador(r){return !!S.uid&&(S.isOwner||r.creadorId===S.uid)}
 
+function haceCuanto(iso){const m=Math.round((Date.now()-new Date(iso).getTime())/60000);if(m<1)return"ahora";if(m<60)return"hace "+m+" min";const h=Math.round(m/60);if(h<24)return"hace "+h+" h";const d=Math.round(h/24);return d===1?"ayer":"hace "+d+" días"}
+function permisoNotif(){return("Notification" in window)?Notification.permission:"no"}
+function vAvisos(){
+  const l=S.avisos||[];const p=permisoNotif();
+  if(l.some(a=>!a.leido)&&!S.leyendo){S.leyendo=true;setTimeout(()=>call("leerAvisos").then(()=>{(S.avisos||[]).forEach(a=>a.leido=true);S.leyendo=false;S.version="";S.keepScroll=true;render()}).catch(()=>{S.leyendo=false}),1500)}
+  return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="retas">← Retas</button></div><h1>Avisos</h1>
+  ${p==="default"?`<div class="install"><div><b>Activa las notificaciones</b><div class="muted small">Te avisamos en el celular cuando alguien se apunte a tus retas.</div></div><button class="btn primary sm" data-act="permiso">Activar</button></div>`:""}
+  ${p==="denied"?`<div class="banner">Las notificaciones están bloqueadas en este celular. Actívalas en los ajustes del navegador para La Reta.</div>`:""}
+  <div class="panel">${l.length?l.map(a=>`<button class="av ${a.leido?"":"nuevo"}" data-act="${a.retaId&&S.retas[a.retaId]?"open":"noop"}" data-id="${esc(a.retaId)}"><span class="dot"></span><span><div class="tx">${esc(a.texto)}</div><div class="muted small">${esc(haceCuanto(a.creado))}</div></span></button>`).join("")
+    :`<div class="empty"><strong>Sin avisos</strong>Aquí verás cuando alguien se apunte o se salga de tus retas.</div>`}</div></div>`;
+}
+function notificar(a){
+  flash(a.texto);try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}
+  if(permisoNotif()!=="granted"||!navigator.serviceWorker)return;
+  navigator.serviceWorker.ready.then(reg=>reg.showNotification("La Reta",{body:a.texto,icon:"icons/icon-192.png",badge:"icons/icon-192.png",tag:a.id,data:{retaId:a.retaId}})).catch(()=>{});
+}
 function vWelcome(){
   const nP=Object.keys(S.players).length,nR=Object.keys(S.retas).length,nC=Object.keys(S.clubs).length;const of=oficial();
   return`<div class="wel"><div><p class="big">Bienvenido</p><p class="muted" style="margin:6px 0 0">Retas, marcadores y ranking del pádel en Tepic. ${nP} jugadores, ${nC} clubs y ${nR} retas registradas.</p></div>
@@ -645,6 +676,9 @@ function apply(d){
   S.scores=Object.fromEntries((d.marcadores||[]).map(m=>[m.id,m]));
   S.multas=Object.fromEntries((d.multas||[]).map(m=>[m.id,m]));
   S.sponsors=Object.fromEntries((d.patrocinadores||[]).map(p=>[p.id,p]));
+  const av=d.avisos||[];
+  if(S.uid&&S.avisosVistos){av.filter(a=>!a.leido&&!S.avisosVistos.has(a.id)).slice(0,3).forEach(notificar)}
+  S.avisos=av;S.avisosVistos=new Set(av.map(a=>a.id));
   S.loadedPlayers=true;S.status="ready";
   renderSpons();return true;
 }
@@ -670,6 +704,8 @@ document.addEventListener("click",async e=>{
   if(a==="tab"){const v=t.dataset.v;if(v==="cuentas"){S.cuentas=null;call("jugadoresAdmin").then(l=>{S.cuentas=l;S.keepScroll=true;render()}).catch(er=>flash(er.message))}
     if((v==="perfil"||v==="club")&&!S.uid&&v!=="club")return go("inicio");return go(v)}
   if(a==="skip"){S.welcomed=true;return go("retas")}
+  if(a==="noop")return;
+  if(a==="permiso"){try{const r=await Notification.requestPermission();if(r==="granted"){flash("Notificaciones activadas");navigator.serviceWorker&&navigator.serviceWorker.ready.then(g=>g.showNotification("La Reta",{body:"Así te avisaremos cuando alguien se apunte a tus retas.",icon:"icons/icon-192.png",tag:"prueba"}))}}catch(er){}S.keepScroll=true;return render()}
   if(a==="regclub"){S.afterReg="club";return go(S.uid?"club":"registro")}
   if(a==="nueva"){if(!S.uid)return go("inicio");return go("nueva",{draft:newDraft()})}
   if(a==="open")return go("reta",{retaId:t.dataset.id});
@@ -769,7 +805,9 @@ if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.ser
   if(S.status!=="ready")return;
   S.view=S.uid?"retas":"inicio";
   render();
-  setInterval(()=>{if(document.hidden||S.dirty)return;const ae=document.activeElement;if(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName))return;refresh(false)},20000);
+  if(location.hash==="#avisos"&&S.uid){S.view="avisos";render()}
+  if(navigator.serviceWorker)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.retaId&&S.retas[e.data.retaId])go("reta",{retaId:e.data.retaId});else if(S.uid)go("avisos")});
+  setInterval(()=>{if(S.dirty)return;if(document.hidden&&Date.now()-(S.ultimoBg||0)<60000)return;if(document.hidden)S.ultimoBg=Date.now();const ae=document.activeElement;if(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName))return;refresh(false)},20000);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh(false)});
 })();
 </script>

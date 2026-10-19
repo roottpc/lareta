@@ -18,6 +18,7 @@ var HOJAS = {
   RETAS: ['id', 'creadorId', 'fecha', 'hora', 'club', 'canchas', 'maxJugadores', 'tipo', 'puntos', 'modo', 'reglas', 'castigo', 'jugadores', 'partidos', 'creado'],
   MARCADORES: ['id', 'retaId', 'matchId', 'a', 'b', 'porId', 'actualizado'],
   MULTAS: ['id', 'retaId', 'jugadorId', 'n'],
+  AVISOS: ['id', 'paraId', 'tipo', 'texto', 'retaId', 'deId', 'creado', 'leido'],
   PATROCINADORES: ['id', 'nombre', 'giro', 'paquete', 'cancha', 'cuota', 'forma', 'color', 'tinta', 'siglas', 'contacto', 'premio', 'lema', 'imagenId', 'activo', 'actualizado']
 };
 var JSON_COLS = { reglas: 1, jugadores: 1, partidos: 1 };
@@ -75,6 +76,7 @@ function api(token, accion, datos) {
       patrocinador: function () { return guardarPatro_(yo, datos); },
       borrarPatrocinador: function () { return borrarPatro_(yo, datos); },
       subirImagen: function () { return subirImagen_(yo, datos); },
+      leerAvisos: function () { return leerAvisos_(yo); },
       jugadoresAdmin: function () { return jugadoresAdmin_(yo); },
       resetPin: function () { return resetPin_(yo, datos); },
       estadoJugador: function () { return estadoJugador_(yo, datos); }
@@ -95,6 +97,13 @@ function libro_() { return SpreadsheetApp.getActiveSpreadsheet(); }
 
 function hoja_(nombre) {
   var h = libro_().getSheetByName(nombre);
+  if (!h && HOJAS[nombre]) {
+    h = libro_().insertSheet(nombre);
+    var cols = HOJAS[nombre];
+    h.getRange(1, 1, 1, cols.length).setValues([cols]).setFontWeight('bold').setBackground('#0a0d00').setFontColor('#d4ff1f');
+    h.getRange(1, 1, h.getMaxRows(), cols.length).setNumberFormat('@');
+    h.setFrozenRows(1);
+  }
   if (!h) falla_('Falta la hoja ' + nombre + '. Ejecuta instalar().');
   return h;
 }
@@ -313,7 +322,8 @@ function todo_(yo, versionCliente) {
       var o = limpio_(p);
       if (!admin) { delete o.cuota; if (!p.activo) return null; }
       return o;
-    }).filter(Boolean)
+    }).filter(Boolean),
+    avisos: yo ? misAvisos_(yo) : []
   };
   return r;
 }
@@ -394,7 +404,61 @@ function inscritos_(yo, d) {
     }
     r.jugadores = nueva;
     guardar_('RETAS', r);
+    avisarInscritos_(yo, r, antes, nueva);
     return limpio_(r);
+  });
+}
+
+/* ===================== Avisos ===================== */
+
+var MESES_ = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+function nombreCorto_(id) {
+  var j = buscar_('JUGADORES', id);
+  return j ? (j.alias || j.nombre || 'Alguien') : 'Alguien';
+}
+function retaCorta_(r) {
+  var f = String(r.fecha || '').split('-'), txt = r.club || 'la reta';
+  if (f.length === 3) txt += ' · ' + Number(f[2]) + ' ' + MESES_[Number(f[1]) - 1];
+  if (r.hora) {
+    var hm = String(r.hora).split(':'), h = Number(hm[0]);
+    txt += ' ' + ((h % 12) || 12) + ':' + hm[1] + (h >= 12 ? ' pm' : ' am');
+  }
+  return txt;
+}
+function tieneCuenta_(id) { var j = buscar_('JUGADORES', id); return !!(j && j.celular); }
+function avisar_(paraId, tipo, texto, retaId, deId) {
+  if (!paraId || paraId === deId || !tieneCuenta_(paraId)) return;
+  guardar_('AVISOS', { id: nuevoId_('a'), paraId: paraId, tipo: tipo, texto: texto, retaId: retaId || '', deId: deId || '', creado: ahora_(), leido: '' });
+}
+function avisarInscritos_(yo, r, antes, nueva) {
+  var agregados = nueva.filter(function (x) { return antes.indexOf(x) < 0; });
+  var quitados = antes.filter(function (x) { return nueva.indexOf(x) < 0; });
+  var cupo = ' (' + nueva.length + '/' + r.maxJugadores + ')';
+  var donde = retaCorta_(r);
+  agregados.forEach(function (x) {
+    if (x === yo.id) avisar_(r.creadorId, 'apunto', nombreCorto_(x) + ' se apuntó a tu reta de ' + donde + cupo, r.id, yo.id);
+    else avisar_(x, 'teapunto', nombreCorto_(yo.id) + ' te apuntó a la reta de ' + donde, r.id, yo.id);
+  });
+  quitados.forEach(function (x) {
+    if (x === yo.id) avisar_(r.creadorId, 'salio', nombreCorto_(x) + ' se salió de tu reta de ' + donde + cupo, r.id, yo.id);
+  });
+  if (agregados.length && nueva.length >= r.maxJugadores && antes.length < r.maxJugadores) {
+    avisar_(r.creadorId, 'llena', 'Tu reta de ' + donde + ' ya está llena (' + nueva.length + '/' + r.maxJugadores + '). Ya puedes sortear los partidos.', r.id, yo.id);
+  }
+}
+function misAvisos_(yo) {
+  return tabla_('AVISOS').filter(function (a) { return a.paraId === yo.id; })
+    .sort(function (a, b) { return a.creado < b.creado ? 1 : -1; }).slice(0, 40)
+    .map(function (a) { return { id: a.id, tipo: a.tipo, texto: a.texto, retaId: a.retaId, creado: a.creado, leido: !!a.leido }; });
+}
+function leerAvisos_(yo) {
+  return conCandado_(function () {
+    var h = hoja_('AVISOS'), cols = HOJAS.AVISOS, col = cols.indexOf('leido') + 1, n = 0;
+    tabla_('AVISOS').forEach(function (a) {
+      if (a.paraId === yo.id && !a.leido) { h.getRange(a._fila, col).setValue(ahora_()); a.leido = 'si'; n++; }
+    });
+    if (n) tocar_();
+    return n;
   });
 }
 

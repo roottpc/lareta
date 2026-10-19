@@ -1,5 +1,5 @@
 /* La Reta: guarda la app en el celular para que abra rápido; los datos siempre vienen del servidor. */
-const VERSION = 'lareta-v3';
+const VERSION = 'lareta-v4';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png',
   'fonts/barlow-condensed-latin-600-normal.woff2', 'fonts/barlow-condensed-latin-700-normal.woff2', 'fonts/barlow-condensed-latin-800-normal.woff2',
   'fonts/barlow-latin-400-normal.woff2', 'fonts/barlow-latin-500-normal.woff2', 'fonts/barlow-latin-600-normal.woff2'];
@@ -16,4 +16,12 @@ self.addEventListener('fetch', e => {
     return;
   }
   e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const data = e.notification.data || {};
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+    for (const c of cs) { if ('focus' in c) { c.postMessage(data); return c.focus(); } }
+    return self.clients.openWindow('./#avisos');
+  }));
 });

@@ -212,13 +212,13 @@ img{max-width:100%}
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbz_vNGis8Z6NjIQAlXmCfak4rjexlT6C0Gu9oUy11U3eRSNObG5s55dEdAz0UhJkChtKg/exec";
 const PRESET_RULES=["Doble falta: pone una ballena","Primer lugar no paga cancha","Último lugar paga las bebidas","Saque a la red: castigo"];
-const S={version:"",cuentas:null,pinNuevo:null,showPin:false,afterReg:null,welcomed:false,yo:null,canWrite:false,sponsors:{},isOwner:false,editSpon:null,players:{},clubs:{},retas:{},scores:{},multas:{},view:"retas",retaId:null,canWrite:true,uid:null,db:null,status:"loading",
+const S={rkModo:(()=>{try{return localStorage.getItem("lareta_rk")||"sets"}catch(e){return"sets"}})(),version:"",cuentas:null,pinNuevo:null,showPin:false,afterReg:null,welcomed:false,yo:null,canWrite:false,sponsors:{},isOwner:false,editSpon:null,players:{},clubs:{},retas:{},scores:{},multas:{},view:"retas",retaId:null,canWrite:true,uid:null,db:null,status:"loading",
   draft:null,editPlayer:null,showInscribir:false,confirm:null,filter:"",dirty:false,chains:{}};
 
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const pname=id=>{const p=S.players[id];return p?(p.alias||p.nombre||"Sin nombre"):"—"};
-const pfull=id=>{const p=S.players[id];return p?[p.nombre,p.apellido].filter(Boolean).join(" "):""};
+const pfull=id=>{const p=S.players[id];if(!p)return"";const f=[p.nombre,p.apellido].filter(Boolean).join(" ");return f===pname(id)?"":f};
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const fmtDate=f=>{if(!f)return"";const d=new Date(f+"T12:00");return d.toLocaleDateString("es-MX",{weekday:"short",day:"numeric",month:"short"})};
 const fmtHora=h=>{if(!h)return"";const[H,M]=h.split(":").map(Number);const ap=H>=12?"pm":"am";return((H%12)||12)+":"+String(M).padStart(2,"0")+" "+ap};
@@ -252,7 +252,9 @@ function renderSpons(){const el=document.getElementById("spons");if(!el)return;c
   const items=l.map(([,x])=>slogo(x,26)).join("");el.innerHTML=`<div class="track go" style="--dur:${Math.max(20,l.length*5)}s">${items}${items.replace(/<span class="slogo">/g,'<span class="slogo" aria-hidden="true">')}</div>`}
 
 /* ---------- estado de reta ---------- */
+const esHist=r=>r&&r.tipo==="historica";
 function retaState(rid,r){
+  if(esHist(r))return{label:"Histórica",cls:"done",n:0,done:0};
   const ps=r.partidos||[];
   if(!ps.length)return{label:"Inscripción",cls:"ball",n:0,done:0};
   const done=ps.filter(m=>{const s=S.scores[scoreKey(rid,m.id)];return s&&s.a!=null&&s.b!=null}).length;
@@ -288,15 +290,19 @@ const pairsOf=ids=>{const o=[];for(let i=0;i+1<ids.length;i+=2)o.push([ids[i],id
 
 /* ---------- estadísticas ---------- */
 function computeStats(){
-  const st={};const g=id=>st[id]??={elo:1000,pj:0,pg:0,pe:0,pp:0,pf:0,pc:0,last:[]};
+  const st={};const g=id=>st[id]??={elo:1000,pj:0,pg:0,pe:0,pp:0,pf:0,pc:0,last:[],sets:0,retas:0};
   for(const[rid,r] of Object.entries(S.retas).sort((a,b)=>-retaOrder(a,b))){
+    if(esHist(r)){for(const f of r.partidos||[]){if(!f||!f.jugadorId)continue;const p=g(f.jugadorId);p.sets+=Number(f.total)||0;p.retas++}continue}
+    const enReta=new Set();
     for(const m of(r.partidos||[]).slice().sort((x,y)=>x.ronda-y.ronda||x.cancha-y.cancha)){
       const s=S.scores[scoreKey(rid,m.id)];if(!s||s.a==null||s.b==null)continue;
       const A=m.a.map(g),B=m.b.map(g);const ra=A.reduce((t,p)=>t+p.elo,0)/A.length,rb=B.reduce((t,p)=>t+p.elo,0)/B.length;
       const ea=1/(1+Math.pow(10,(rb-ra)/400));const sa=s.a>s.b?1:s.a<s.b?0:.5;const d=24*(sa-ea);
-      A.forEach(p=>{p.elo+=d;p.pj++;p.pf+=s.a;p.pc+=s.b;sa===1?p.pg++:sa===0?p.pp++:p.pe++;p.last.push(sa)});
-      B.forEach(p=>{p.elo-=d;p.pj++;p.pf+=s.b;p.pc+=s.a;sa===0?p.pg++:sa===1?p.pp++:p.pe++;p.last.push(1-sa)});
+      m.a.concat(m.b).forEach(x=>enReta.add(x));
+      A.forEach(p=>{p.sets+=sa===1?1:0;p.elo+=d;p.pj++;p.pf+=s.a;p.pc+=s.b;sa===1?p.pg++:sa===0?p.pp++:p.pe++;p.last.push(sa)});
+      B.forEach(p=>{p.sets+=sa===0?1:0;p.elo-=d;p.pj++;p.pf+=s.b;p.pc+=s.a;sa===0?p.pg++:sa===1?p.pp++:p.pe++;p.last.push(1-sa)});
     }
+    enReta.forEach(x=>g(x).retas++);
   }return st;
 }
 function retaTable(rid,r){
@@ -332,6 +338,9 @@ function go(view,extra={}){Object.assign(S,{view,confirm:null,showInscribir:fals
 
 function retaCard([id,r]){
   const st=retaState(id,r);const n=(r.jugadores||[]).length;
+  if(esHist(r))return`<button class="card" data-act="open" data-id="${esc(id)}">
+    <div class="row between"><span class="when">${esc(fmtDate(r.fecha))}</span><span class="chip done">Histórica</span></div>
+    <div class="row between" style="margin-top:4px"><span style="font-weight:600">${esc(clubName(r))}</span><span class="muted small">Royal · ${n} jugadores · sets ganados</span></div></button>`;
   return`<button class="card" data-act="open" data-id="${esc(id)}">
     <div class="row between"><span class="when">${esc(fmtDate(r.fecha))} · ${esc(fmtHora(r.hora))}</span><span class="chip ${st.cls}">${esc(st.label)}</span></div>
     <div class="row between" style="margin-top:4px"><span style="font-weight:600">${esc(clubName(r))}</span>
@@ -339,8 +348,8 @@ function retaCard([id,r]){
 }
 function vRetas(){
   const all=Object.entries(S.retas).sort(retaOrder);
-  const act=all.filter(([id,r])=>retaState(id,r).label!=="Terminada").reverse();
-  const fin=all.filter(([id,r])=>retaState(id,r).label==="Terminada");
+  const act=all.filter(([id,r])=>!esHist(r)&&retaState(id,r).label!=="Terminada").reverse();
+  const fin=all.filter(([id,r])=>esHist(r)||retaState(id,r).label==="Terminada");
   return`<div class="stack">
     ${instalarHTML()}
     <div class="section-head"><h1>Retas</h1>${S.uid?`<button class="btn primary" data-act="nueva">Crear reta</button>`:`<button class="btn" data-act="tab" data-v="inicio">Entrar</button>`}</div>
@@ -386,8 +395,24 @@ function vNueva(){
   </form>`;
 }
 
+function vHist(id,r){
+  const filas=(r.partidos||[]).filter(f=>f&&f.jugadorId).slice().sort((a,b)=>(b.total||0)-(a.total||0));
+  const nP=Math.max(0,...filas.map(f=>(f.sets||[]).length));const C=esCreador(r);
+  let pos=0,prev=null;
+  return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="retas">← Retas</button></div>
+  <div class="panel stack"><div class="row between"><span class="chip done">Reta histórica</span><span class="muted small">Royal · sets ganados</span></div>
+    <h1>${esc(clubName(r))}</h1>
+    <div class="row" style="font-family:var(--f-display);font-size:20px;font-weight:700;text-transform:uppercase">${esc(fmtDate(r.fecha))}${r.hora?" · "+esc(fmtHora(r.hora)):""}</div>
+    <p class="muted small" style="margin:0">Cargada desde la foto de la tabla. Cuenta para la columna de sets ganados del ranking.</p></div>
+  <h2>Tabla</h2><div class="panel tbl-wrap"><table><thead><tr><th>#</th><th>Jugador</th>${Array.from({length:nP},(_,i)=>`<th>P${i+1}</th>`).join("")}<th>Total</th></tr></thead><tbody>
+  ${filas.map((f,i)=>{if(f.total!==prev){pos=i+1;prev=f.total}return`<tr class="${pos===1?"first":""}"><td class="pos">${pos}</td><td><b>${esc(pname(f.jugadorId))}</b></td>${Array.from({length:nP},(_,k)=>{const v=(f.sets||[])[k];return`<td>${v==null?"<span class=muted>–</span>":v}</td>`}).join("")}<td class="elo">${f.total}</td></tr>`}).join("")}
+  </tbody></table></div>
+  ${C?(S.confirm==="reta"?`<div class="panel row between"><span>¿Borrar esta reta histórica?</span><span class="row"><button class="btn" data-act="cancel">No</button><button class="btn danger" data-act="delReta">Sí, borrar</button></span></div>`:`<div><button class="btn danger sm" data-act="ask" data-what="reta">Borrar reta</button></div>`):""}
+  </div>`;
+}
 function vReta(){
   const id=S.retaId,r=S.retas[id];if(!r)return`<div class="panel empty"><strong>Reta no encontrada</strong><button class="btn" data-act="tab" data-v="retas">Ver retas</button></div>`;
+  if(esHist(r))return vHist(id,r);
   const ins=r.jugadores||[];const st=retaState(id,r);const fija=r.tipo==="fija";const ps=r.partidos||[];
   const anyScore=ps.some(m=>{const s=S.scores[scoreKey(id,m.id)];return s&&(s.a!=null||s.b!=null)});
   const W=puedeOrg(r),C=esCreador(r),J=!!S.uid;
@@ -571,14 +596,19 @@ function vPatros(){
     <div class="row" style="gap:8px"><span class="muted small" style="font-variant-numeric:tabular-nums">$${(+x.cuota||0).toLocaleString("es-MX")}</span><button class="btn sm" data-act="editS" data-id="${esc(id)}">Editar</button></div></div>`).join("")||`<p class="muted" style="margin:0">Sin patrocinadores todavía.</p>`}</div></div>`;
 }
 function vRanking(){
-  const st=computeStats();const rows=Object.entries(st).filter(([id])=>S.players[id]).sort((a,b)=>b[1].elo-a[1].elo);
-  const lo=rows.length?Math.min(...rows.map(r=>r[1].elo)):0,hi=rows.length?Math.max(...rows.map(r=>r[1].elo)):0;
+  const st=computeStats();const modo=S.rkModo||"sets";const val=x=>modo==="sets"?x.sets:x.elo;
+  const rows=Object.entries(st).filter(([id])=>S.players[id]).sort((a,b)=>val(b[1])-val(a[1])||b[1].elo-a[1].elo);
+  const lo=rows.length?Math.min(...rows.map(r=>val(r[1]))):0,hi=rows.length?Math.max(...rows.map(r=>val(r[1]))):0;
   const trend=l=>l.slice(-5).map(x=>x===1?"G":x===0?"P":"E").join(" ");
-  const of=oficial();
+  const of=oficial();let pos=0,prev=null;
   return`<div class="stack"><h1>Ranking</h1>${of?heroHTML(of):""}
-  <p class="muted" style="margin:0">Todos empiezan en 1000. Cada partido compara el promedio de las dos parejas: ganarle a una pareja más fuerte da más puntos y perder con una más débil quita más. <b>Dif</b> = puntos anotados menos puntos recibidos en todos tus partidos.</p>
-  ${rows.length?`<div class="panel tbl-wrap rk"><table><thead><tr><th>#</th><th>Jugador</th><th>Rating</th><th>PJ</th><th>PG</th><th>%</th><th>Dif</th><th>Últimos</th></tr></thead><tbody>
-  ${rows.map(([id,x],i)=>{const g=hi>lo?(x.elo-lo)/(hi-lo):1;return`<tr class="${i<3?"top":""}${id===S.uid?" yo":""}" style="--g:${g.toFixed(3)}"><td class="pos ${i<3?"m"+(i+1):""}">${i+1}</td><td class="nm"><b>${esc(pname(id))}</b><div class="muted small">${esc(pfull(id))}</div></td><td class="elo">${Math.round(x.elo)}</td><td>${x.pj}</td><td>${x.pg}</td><td>${x.pj?Math.round(x.pg/x.pj*100):0}</td><td class="${x.pf-x.pc>0?"up":x.pf-x.pc<0?"down":""}">${x.pf-x.pc>0?"+":""}${x.pf-x.pc}</td><td class="muted small">${trend(x.last)}</td></tr>`}).join("")}
+  <div class="seg" role="tablist"><label><input type="radio" name="rk" data-act="rkModo" value="sets" ${modo==="sets"?"checked":""}>Sets ganados</label><label><input type="radio" name="rk" data-act="rkModo" value="rating" ${modo==="rating"?"checked":""}>Rating</label></div>
+  <p class="muted" style="margin:0">${modo==="sets"?"<b>Sets ganados</b> suma los sets de las retas históricas más cada partido ganado en las retas de la app.":"Todos empiezan en 1000. Cada partido compara el promedio de las dos parejas: ganarle a una pareja más fuerte da más puntos y perder con una más débil quita más. <b>Dif</b> = puntos anotados menos puntos recibidos."}</p>
+  ${rows.length?`<div class="panel tbl-wrap rk"><table><thead><tr><th>#</th><th>Jugador</th>${modo==="sets"?"<th>Sets</th><th>Retas</th><th>Rating</th>":"<th>Rating</th><th>PJ</th><th>PG</th><th>%</th><th>Dif</th><th>Últimos</th><th>Sets</th>"}</tr></thead><tbody>
+  ${rows.map(([id,x],i)=>{const v=val(x);if(v!==prev){pos=i+1;prev=v}const g=hi>lo?(v-lo)/(hi-lo):1;
+    const celdas=modo==="sets"?`<td class="elo">${x.sets}</td><td>${x.retas}</td><td>${Math.round(x.elo)}</td>`
+      :`<td class="elo">${Math.round(x.elo)}</td><td>${x.pj}</td><td>${x.pg}</td><td>${x.pj?Math.round(x.pg/x.pj*100):0}</td><td class="${x.pf-x.pc>0?"up":x.pf-x.pc<0?"down":""}">${x.pf-x.pc>0?"+":""}${x.pf-x.pc}</td><td class="muted small">${trend(x.last)}</td><td>${x.sets}</td>`;
+    return`<tr class="${pos<=3?"top":""}${id===S.uid?" yo":""}" style="--g:${g.toFixed(3)}"><td class="pos ${pos<=3?"m"+pos:""}">${pos}</td><td class="nm"><b>${esc(pname(id))}</b><div class="muted small">${esc(pfull(id))}</div></td>${celdas}</tr>`}).join("")}
   </tbody></table></div>`:`<div class="panel empty"><strong>Aún sin partidos</strong>El ranking se arma solo en cuanto se capturen marcadores en las retas.</div>`}</div>`;
 }
 
@@ -677,6 +707,7 @@ document.addEventListener("change",e=>{
       call("subirImagen",{tipo:f.type,base64:b64}).then(r=>{S.sponImg=r.imagenId;S.keepScroll=true;document.activeElement?.blur();render();flash("Imagen lista. Guarda para aplicarla.")}).catch(er=>flash(er.message))};
     rd.readAsDataURL(f);return}
   const sf=t.closest("form[data-form='spon']");if(sf){const svg=sf.querySelector("svg");if(svg){const fd=new FormData(sf);svg.outerHTML=logoSVG({nombre:fd.get("nombre"),siglas:fd.get("siglas"),forma:fd.get("forma"),color:fd.get("color"),tinta:fd.get("tinta")},56)}return}
+  if(t.dataset.act==="rkModo"){S.rkModo=t.value;try{localStorage.setItem("lareta_rk",t.value)}catch(er){}S.keepScroll=true;t.blur();return render()}
   const a=t.dataset.act;const rid=S.retaId,r=S.retas[rid];if(!r||!S.uid)return;
   if(a==="ins"){let ins=(r.jugadores||[]).slice();const id=t.dataset.id;
     if(t.checked){if(ins.length>=r.maxJugadores){t.checked=false;return flash("La reta ya está llena.")}if(!ins.includes(id))ins.push(id)}else ins=ins.filter(x=>x!==id);

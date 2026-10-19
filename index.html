@@ -39,7 +39,7 @@ header.top .wrap{display:flex;align-items:center;justify-content:space-between;g
 .brand{font-family:var(--f-display);font-weight:800;font-size:30px;letter-spacing:.03em;text-transform:uppercase;line-height:1;display:flex;align-items:center;gap:10px;color:var(--ball);text-shadow:var(--glow)}
 
 .top .sub{font-size:13px;opacity:.85}
-main{padding-block:18px 160px}
+main{padding-block:18px 180px}
 h1,h2,h3{font-family:var(--f-display);font-weight:700;text-wrap:balance;margin:0;line-height:1.1}
 h1{color:var(--ink);font-size:30px;text-transform:uppercase;letter-spacing:.01em}
 h2{font-size:21px;text-transform:uppercase;letter-spacing:.03em}
@@ -223,11 +223,30 @@ nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:re
 .av.nuevo .dot{background:var(--ball);box-shadow:var(--glow)}
 .av.nuevo .tx{font-weight:600}
 .me-btn{appearance:none;border:1px solid var(--ball);background:transparent;color:var(--ball);border-radius:999px;padding:7px 14px;font-weight:600;cursor:pointer;max-width:55vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.spons{border-bottom:1px solid var(--line);overflow:hidden;position:relative;height:44px}
-.spons .track{display:flex;gap:28px;align-items:center;height:44px;width:max-content;padding-inline:14px}
-@media (prefers-reduced-motion:no-preference){.spons .track.go{animation:marq var(--dur,40s) linear infinite}}
+.spons{position:relative;overflow:hidden;height:74px;background:linear-gradient(180deg,#0b0f10,#050607);border-top:2px solid var(--ball);box-shadow:0 -6px 22px rgba(212,255,31,.25)}
+.spons::before,.spons::after{content:"";position:absolute;top:0;bottom:0;width:28px;z-index:2;pointer-events:none}
+.spons::before{left:0;background:linear-gradient(90deg,#050607,transparent)}.spons::after{right:0;background:linear-gradient(270deg,#050607,transparent)}
+.spons .lbl-sp{position:absolute;left:50%;top:-1px;transform:translateX(-50%);z-index:3;background:var(--ball);color:var(--ball-ink);font:800 9px/1 var(--f-body);letter-spacing:.18em;text-transform:uppercase;padding:3px 10px 4px;border-radius:0 0 8px 8px}
+.spons .track{display:flex;gap:12px;align-items:center;height:74px;width:max-content;padding:8px 12px 0}
+@media (prefers-reduced-motion:no-preference){.spons .track.go{animation:marq var(--dur,40s) linear infinite}.spons:hover .track,.spons:active .track{animation-play-state:paused}}
 @media (prefers-reduced-motion:reduce){.spons{overflow-x:auto}}
 @keyframes marq{to{transform:translateX(-50%)}}
+.sp-card{position:relative;flex:none;display:flex;align-items:center;gap:10px;height:54px;padding:0 16px 0 8px;border-radius:12px;overflow:hidden;text-decoration:none;color:#fff;
+  background:linear-gradient(120deg,var(--c) 0%,color-mix(in srgb,var(--c) 55%,#000) 100%);box-shadow:0 0 0 1px rgba(255,255,255,.18) inset,0 4px 14px rgba(0,0,0,.45),0 0 16px color-mix(in srgb,var(--c) 45%,transparent)}
+.sp-card::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-18deg)}
+@media (prefers-reduced-motion:no-preference){.sp-card::after{animation:brillo 3.2s ease-in-out infinite;animation-delay:var(--d,0s)}}
+@keyframes brillo{0%,60%{left:-60%}100%{left:130%}}
+.sp-card .lg{flex:none;width:40px;height:40px;border-radius:10px;background:rgba(0,0,0,.28);display:grid;place-items:center}
+.sp-card .lg svg{width:34px;height:34px}
+.sp-card .tx{display:flex;flex-direction:column;line-height:1.05;white-space:nowrap}
+.sp-card .tx b{font-family:var(--f-display);font-weight:800;font-size:19px;letter-spacing:.02em;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,.45)}
+.sp-card .tx small{font-size:11px;font-weight:600;opacity:.92;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.sp-card.claro{color:#0a0d00}.sp-card.claro .tx b{text-shadow:none}
+.sp-card .wa-i{flex:none;width:22px;height:22px;border-radius:50%;background:#25d366;display:grid;place-items:center;margin-left:2px}
+.sp-card .wa-i svg{width:14px;height:14px;color:#04210f}
+.sp-img{flex:none;height:54px;border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.2) inset,0 4px 14px rgba(0,0,0,.45);position:relative;display:block}
+.sp-img img{height:54px;width:auto;display:block}
+.sp-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--ball);box-shadow:var(--glow)}
 .slogo{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;font-weight:600;font-size:13px;color:var(--ink)}
 .slogo svg{flex:none;display:block}
 .slogo .t{display:flex;flex-direction:column;line-height:1.05}
@@ -342,8 +361,18 @@ function bannerHTML(sp){if(!sp)return"";const c=/^#[0-9a-f]{6}$/i.test(sp.color|
   return`<figure class="bnr">${inner}<figcaption class="tag">Patrocinador</figcaption></figure>`}
 function heroHTML(sp){if(!sp)return"";const img=sp.imagenId&&/^[A-Za-z0-9_-]+$/.test(sp.imagenId);
   return`<div class="hero"><div class="in${img?" im":""}">${img?`<img src="${imgURL(sp.imagenId)}" alt="${esc(sp.nombre)}" referrerpolicy="no-referrer">`:`<div class="lg">${logoSVG(sp,120)}</div><div class="tx"><div class="k">Ranking oficial presentado por</div><div class="n">${esc(sp.nombre)}</div>${sp.lema?`<div class="l">${esc(sp.lema)}</div>`:""}${sp.premio?`<span class="p">Premio al líder de cada reta: ${esc(sp.premio)}</span>`:""}</div>`}<span class="shine" aria-hidden="true"></span></div></div>`}
+function lum(hex){const h=hex.replace("#","");const r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);return(r*299+g*587+b*114)/1000}
+function spCard(x,i){const c=/^#[0-9a-f]{6}$/i.test(x.color||"")?x.color:"#d4ff1f";
+  const tel=String(x.contacto||"").replace(/\D/g,"");const wa=tel.length===10?"52"+tel:(tel.length>=11?tel:"");
+  const href=wa?`https://wa.me/${wa}?text=${encodeURIComponent("Hola, los vi en La Reta 🎾")}`:"";
+  const tag=href?"a":"span",attrs=href?`href="${href}" target="_blank" rel="noopener"`:"";
+  if(x.imagenId&&/^[A-Za-z0-9_-]+$/.test(x.imagenId))return`<${tag} class="sp-img" ${attrs} aria-label="${esc(x.nombre)}"><img src="${imgURL(x.imagenId).replace(/=w\d+$/,"=w400")}" alt="${esc(x.nombre)}" referrerpolicy="no-referrer" loading="lazy"></${tag}>`;
+  return`<${tag} class="sp-card ${lum(c)>170?"claro":""}" style="--c:${c};--d:${(i*.45)%3.2}s" ${attrs}><span class="lg">${logoSVG(x,34)}</span><span class="tx"><b>${esc(x.nombre)}</b>${x.lema||x.giro?`<small>${esc(x.lema||x.giro)}</small>`:""}</span>${href?`<span class="wa-i">${WA_SVG}</span>`:""}</${tag}>`}
 function renderSpons(){const el=document.getElementById("spons");if(!el)return;const l=activeSpons();el.hidden=!l.length;if(!l.length)return;
-  const items=l.map(([,x])=>slogo(x,26)).join("");el.innerHTML=`<div class="track go" style="--dur:${Math.max(20,l.length*5)}s">${items}${items.replace(/<span class="slogo">/g,'<span class="slogo" aria-hidden="true">')}</div>`}
+  const seq=l.map(([,x],i)=>spCard(x,i)).join('<span class="sp-dot" aria-hidden="true"></span>')+'<span class="sp-dot" aria-hidden="true"></span>';
+  const vez=seq.replace(/<(a|span) class="sp-/g,'<$1 aria-hidden="true" tabindex="-1" class="sp-');
+  const k=JSON.stringify(l.map(([id,x])=>id+x.nombre+x.color+x.imagenId+x.lema));if(el.dataset.k===k)return;el.dataset.k=k;
+  el.innerHTML=`<span class="lbl-sp">Patrocinadores</span><div class="track go" style="--dur:${Math.max(22,l.length*6)}s">${seq}${vez}</div>`}
 
 /* ---------- estado de reta ---------- */
 const esHist=r=>r&&r.tipo==="historica";

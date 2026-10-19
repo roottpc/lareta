@@ -299,8 +299,8 @@ function computeStats(){
       const A=m.a.map(g),B=m.b.map(g);const ra=A.reduce((t,p)=>t+p.elo,0)/A.length,rb=B.reduce((t,p)=>t+p.elo,0)/B.length;
       const ea=1/(1+Math.pow(10,(rb-ra)/400));const sa=s.a>s.b?1:s.a<s.b?0:.5;const d=24*(sa-ea);
       m.a.concat(m.b).forEach(x=>enReta.add(x));
-      A.forEach(p=>{p.sets+=sa===1?1:0;p.elo+=d;p.pj++;p.pf+=s.a;p.pc+=s.b;sa===1?p.pg++:sa===0?p.pp++:p.pe++;p.last.push(sa)});
-      B.forEach(p=>{p.sets+=sa===0?1:0;p.elo-=d;p.pj++;p.pf+=s.b;p.pc+=s.a;sa===0?p.pg++:sa===1?p.pp++:p.pe++;p.last.push(1-sa)});
+      A.forEach(p=>{p.sets+=s.a;p.elo+=d;p.pj++;p.pf+=s.a;p.pc+=s.b;sa===1?p.pg++:sa===0?p.pp++:p.pe++;p.last.push(sa)});
+      B.forEach(p=>{p.sets+=s.b;p.elo-=d;p.pj++;p.pf+=s.b;p.pc+=s.a;sa===0?p.pg++:sa===1?p.pp++:p.pe++;p.last.push(1-sa)});
     }
     enReta.forEach(x=>g(x).retas++);
   }return st;
@@ -340,7 +340,7 @@ function retaCard([id,r]){
   const st=retaState(id,r);const n=(r.jugadores||[]).length;
   if(esHist(r))return`<button class="card" data-act="open" data-id="${esc(id)}">
     <div class="row between"><span class="when">${esc(fmtDate(r.fecha))}</span><span class="chip done">Histórica</span></div>
-    <div class="row between" style="margin-top:4px"><span style="font-weight:600">${esc(clubName(r))}</span><span class="muted small">Royal · ${n} jugadores · sets ganados</span></div></button>`;
+    <div class="row between" style="margin-top:4px"><span style="font-weight:600">${esc(clubName(r))}</span><span class="muted small">Royal · ${n} jugadores · puntos</span></div></button>`;
   return`<button class="card" data-act="open" data-id="${esc(id)}">
     <div class="row between"><span class="when">${esc(fmtDate(r.fecha))} · ${esc(fmtHora(r.hora))}</span><span class="chip ${st.cls}">${esc(st.label)}</span></div>
     <div class="row between" style="margin-top:4px"><span style="font-weight:600">${esc(clubName(r))}</span>
@@ -400,10 +400,11 @@ function vHist(id,r){
   const nP=Math.max(0,...filas.map(f=>(f.sets||[]).length));const C=esCreador(r);
   let pos=0,prev=null;
   return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="retas">← Retas</button></div>
-  <div class="panel stack"><div class="row between"><span class="chip done">Reta histórica</span><span class="muted small">Royal · sets ganados</span></div>
+  <div class="panel stack"><div class="row between"><span class="chip done">Reta histórica</span><span class="muted small">Royal · puntos</span></div>
     <h1>${esc(clubName(r))}</h1>
     <div class="row" style="font-family:var(--f-display);font-size:20px;font-weight:700;text-transform:uppercase">${esc(fmtDate(r.fecha))}${r.hora?" · "+esc(fmtHora(r.hora)):""}</div>
-    <p class="muted small" style="margin:0">Cargada desde la foto de la tabla. Cuenta para la columna de sets ganados del ranking.</p></div>
+    ${(r.reglas||[]).length?`<div class="row">${r.reglas.map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>`:""}
+    <p class="muted small" style="margin:0">Cargada desde la foto de la tabla. Sus puntos cuentan para el ranking.</p></div>
   <h2>Tabla</h2><div class="panel tbl-wrap"><table><thead><tr><th>#</th><th>Jugador</th>${Array.from({length:nP},(_,i)=>`<th>P${i+1}</th>`).join("")}<th>Total</th></tr></thead><tbody>
   ${filas.map((f,i)=>{if(f.total!==prev){pos=i+1;prev=f.total}return`<tr class="${pos===1?"first":""}"><td class="pos">${pos}</td><td><b>${esc(pname(f.jugadorId))}</b></td>${Array.from({length:nP},(_,k)=>{const v=(f.sets||[])[k];return`<td>${v==null?"<span class=muted>–</span>":v}</td>`}).join("")}<td class="elo">${f.total}</td></tr>`}).join("")}
   </tbody></table></div>
@@ -602,9 +603,9 @@ function vRanking(){
   const trend=l=>l.slice(-5).map(x=>x===1?"G":x===0?"P":"E").join(" ");
   const of=oficial();let pos=0,prev=null;
   return`<div class="stack"><h1>Ranking</h1>${of?heroHTML(of):""}
-  <div class="seg" role="tablist"><label><input type="radio" name="rk" data-act="rkModo" value="sets" ${modo==="sets"?"checked":""}>Sets ganados</label><label><input type="radio" name="rk" data-act="rkModo" value="rating" ${modo==="rating"?"checked":""}>Rating</label></div>
-  <p class="muted" style="margin:0">${modo==="sets"?"<b>Sets ganados</b> suma los sets de las retas históricas más cada partido ganado en las retas de la app.":"Todos empiezan en 1000. Cada partido compara el promedio de las dos parejas: ganarle a una pareja más fuerte da más puntos y perder con una más débil quita más. <b>Dif</b> = puntos anotados menos puntos recibidos."}</p>
-  ${rows.length?`<div class="panel tbl-wrap rk"><table><thead><tr><th>#</th><th>Jugador</th>${modo==="sets"?"<th>Sets</th><th>Retas</th><th>Rating</th>":"<th>Rating</th><th>PJ</th><th>PG</th><th>%</th><th>Dif</th><th>Últimos</th><th>Sets</th>"}</tr></thead><tbody>
+  <div class="seg" role="tablist"><label><input type="radio" name="rk" data-act="rkModo" value="sets" ${modo==="sets"?"checked":""}>Puntos</label><label><input type="radio" name="rk" data-act="rkModo" value="rating" ${modo==="rating"?"checked":""}>Rating</label></div>
+  <p class="muted" style="margin:0">${modo==="sets"?"<b>Puntos</b> suma los puntos ganados en todas las retas: las históricas cargadas de las fotos y cada partido capturado en la app.":"Todos empiezan en 1000. Cada partido compara el promedio de las dos parejas: ganarle a una pareja más fuerte da más puntos y perder con una más débil quita más. <b>Dif</b> = puntos anotados menos puntos recibidos."}</p>
+  ${rows.length?`<div class="panel tbl-wrap rk"><table><thead><tr><th>#</th><th>Jugador</th>${modo==="sets"?"<th>Puntos</th><th>Retas</th><th>Rating</th>":"<th>Rating</th><th>PJ</th><th>PG</th><th>%</th><th>Dif</th><th>Últimos</th><th>Puntos</th>"}</tr></thead><tbody>
   ${rows.map(([id,x],i)=>{const v=val(x);if(v!==prev){pos=i+1;prev=v}const g=hi>lo?(v-lo)/(hi-lo):1;
     const celdas=modo==="sets"?`<td class="elo">${x.sets}</td><td>${x.retas}</td><td>${Math.round(x.elo)}</td>`
       :`<td class="elo">${Math.round(x.elo)}</td><td>${x.pj}</td><td>${x.pg}</td><td>${x.pj?Math.round(x.pg/x.pj*100):0}</td><td class="${x.pf-x.pc>0?"up":x.pf-x.pc<0?"down":""}">${x.pf-x.pc>0?"+":""}${x.pf-x.pc}</td><td class="muted small">${trend(x.last)}</td><td>${x.sets}</td>`;

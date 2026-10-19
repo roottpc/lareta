@@ -1,5 +1,5 @@
 /* La Reta: guarda la app en el celular para que abra rápido; los datos siempre vienen del servidor. */
-const VERSION = 'lareta-v2';
+const VERSION = 'lareta-v3';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png',
   'fonts/barlow-condensed-latin-600-normal.woff2', 'fonts/barlow-condensed-latin-700-normal.woff2', 'fonts/barlow-condensed-latin-800-normal.woff2',
   'fonts/barlow-latin-400-normal.woff2', 'fonts/barlow-latin-500-normal.woff2', 'fonts/barlow-latin-600-normal.woff2'];

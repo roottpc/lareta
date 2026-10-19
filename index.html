@@ -955,7 +955,7 @@ async function podioCanvas(id,r){
   // fondo
   x.fillStyle="#050607";x.fillRect(0,0,W,H);
   let g=x.createRadialGradient(W/2,560,40,W/2,560,820);g.addColorStop(0,"rgba(212,255,31,.20)");g.addColorStop(1,"rgba(212,255,31,0)");x.fillStyle=g;x.fillRect(0,0,W,H);
-  x.save();x.strokeStyle="rgba(255,255,255,.06)";x.lineWidth=4;x.strokeRect(70,400,W-140,1200);x.beginPath();x.moveTo(70,1000);x.lineTo(W-70,1000);x.moveTo(W/2,400);x.lineTo(W/2,1600);x.stroke();x.restore();
+  x.save();x.strokeStyle="rgba(255,255,255,.06)";x.lineWidth=4;x.strokeRect(70,400,W-140,1080);x.beginPath();x.moveTo(70,940);x.lineTo(W-70,940);x.moveTo(W/2,400);x.lineTo(W/2,1480);x.stroke();x.restore();
   // encabezado
   x.textAlign="center";x.textBaseline="alphabetic";
   x.shadowColor="rgba(212,255,31,.7)";x.shadowBlur=30;x.fillStyle=LIME;font(800,120,DC);ls(6);x.fillText("LA RETA",W/2,170);x.shadowBlur=0;
@@ -979,7 +979,7 @@ async function podioCanvas(id,r){
     x.fillStyle=LIME;font(800,34,DC);x.fillText(row.pts+" PTS"+(row.pg!=null?" · "+row.pg+" G":""),k.cx,Y-18);
   }
   // tabla del resto
-  let y=1185;const resto=rows.slice(3),max=7;
+  let y=1180;const resto=rows.slice(3),max=5;
   if(resto.length){x.textAlign="left";
     resto.slice(0,max).forEach((row,j)=>{const Y=y+j*58;
       x.fillStyle=j%2?"rgba(255,255,255,.03)":"rgba(255,255,255,.07)";rr(110,Y-40,W-220,52,10);x.fill();
@@ -989,14 +989,50 @@ async function podioCanvas(id,r){
     if(resto.length>max){x.fillStyle="rgba(255,255,255,.6)";font(500,28,BD);x.textAlign="center";x.fillText("y "+(resto.length-max)+" más",W/2,y+max*58+6)}
   }
   x.textAlign="center";
-  // pie: patrocinador oficial y liga
-  const of=oficial();let fy=1720;
-  if(of){x.fillStyle="rgba(255,255,255,.6)";font(600,24,BD);ls(6);x.fillText("PRESENTADO POR",W/2,fy-70);ls(0);
-    const im=await svgImg(logoSVG(of,64));font(800,46,DC);const tw=x.measureText(of.nombre.toUpperCase()).width,tot=64+18+tw,sx=W/2-tot/2;
-    if(im)x.drawImage(im,sx,fy-58,64,64);x.textAlign="left";x.fillStyle="#fff";x.fillText(of.nombre.toUpperCase(),sx+82,fy-10);x.textAlign="center";fy+=40}
-  x.fillStyle=LIME;rr(W/2-290,fy+20,580,74,37);x.fill();x.fillStyle="#0a0d00";font(800,36,DC);ls(2);x.fillText("ARMA TU RETA EN LA RETA",W/2,fy+70);ls(0);
-  x.fillStyle="rgba(255,255,255,.7)";font(500,26,BD);x.fillText(APP_URL.replace(/^https:\/\//,"").replace(/\/$/,""),W/2,fy+130);
+  // pie: banner del patrocinador (su imagen o un banner armado con su marca)
+  const sp=patroPodio(id);
+  if(sp){x.fillStyle="rgba(255,255,255,.6)";font(600,22,BD);ls(6);x.fillText(sp.paquete==="oficial"?"PRESENTADO POR":"PATROCINADOR",W/2,1528);ls(0);
+    await bannerEnCanvas(x,sp,60,1548,960,240)}
+  x.fillStyle=LIME;rr(W/2-290,1812,580,66,33);x.fill();x.fillStyle="#0a0d00";font(800,34,DC);ls(2);x.fillText("ARMA TU RETA EN LA RETA",W/2,1857);ls(0);
+  x.fillStyle="rgba(255,255,255,.7)";font(500,24,BD);x.fillText(APP_URL.replace(/^https:\/\//,"").replace(/\/$/,""),W/2,1906);
   return cv;
+}
+function patroPodio(id){const of=oficial();if(of)return of;const bs=bannerSpons();return bs.length?bs[hashStr(id)%bs.length]:null}
+const imgCache={};
+function cargarImg(src,cors){return new Promise(res=>{const im=new Image();if(cors)im.crossOrigin="anonymous";im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src})}
+async function imgPatro(sp){
+  if(!sp.imagenId||!/^[A-Za-z0-9_-]+$/.test(sp.imagenId))return null;
+  if(sp.imagenId in imgCache)return imgCache[sp.imagenId];
+  let im=await cargarImg(imgURL(sp.imagenId),true);
+  if(im){try{const t=document.createElement("canvas");t.width=t.height=2;const c=t.getContext("2d");c.drawImage(im,0,0,2,2);c.getImageData(0,0,1,1)}catch(e){im=null}}
+  if(!im){try{const r=await call("imagenPatro",{imagenId:sp.imagenId});im=await cargarImg("data:"+r.tipo+";base64,"+r.base64,false)}catch(e){im=null}}
+  return imgCache[sp.imagenId]=im;
+}
+async function bannerEnCanvas(x,sp,X,Y,w,h){
+  const rad=22;x.save();x.beginPath();x.roundRect?x.roundRect(X,Y,w,h,rad):x.rect(X,Y,w,h);x.clip();
+  const im=await imgPatro(sp);
+  if(im){const k=Math.max(w/im.width,h/im.height),iw=im.width*k,ih=im.height*k;x.drawImage(im,X+(w-iw)/2,Y+(h-ih)/2,iw,ih)}
+  else{
+    const c=/^#[0-9a-f]{6}$/i.test(sp.color||"")?sp.color:"#d4ff1f",claro=lum(c)>170;
+    let g=x.createLinearGradient(X,Y,X+w,Y+h);g.addColorStop(0,c);g.addColorStop(1,"#050607");x.fillStyle=g;x.fillRect(X,Y,w,h);
+    x.fillStyle="rgba(0,0,0,.28)";x.beginPath();x.moveTo(X+w*.68,Y);x.lineTo(X+w,Y);x.lineTo(X+w,Y+h);x.lineTo(X+w*.56,Y+h);x.fill();
+    x.fillStyle="rgba(255,255,255,.18)";x.beginPath();x.moveTo(X+w*.64,Y);x.lineTo(X+w*.665,Y);x.lineTo(X+w*.545,Y+h);x.lineTo(X+w*.52,Y+h);x.fill();
+    x.strokeStyle="rgba(255,255,255,.2)";x.lineWidth=4;x.strokeRect(X+w*.71,Y+28,w*.27,h-56);x.beginPath();x.moveTo(X+w*.845,Y+28);x.lineTo(X+w*.845,Y+h-28);x.moveTo(X+w*.71,Y+h/2);x.lineTo(X+w*.98,Y+h/2);x.stroke();
+    const bx=X+w-110,by=Y+h-80;g=x.createRadialGradient(bx-14,by-14,6,bx,by,52);g.addColorStop(0,"#f2ff8a");g.addColorStop(.7,"#d4ff1f");g.addColorStop(1,"#9fcc00");
+    x.save();x.shadowColor="rgba(212,255,31,.6)";x.shadowBlur=30;x.fillStyle=g;x.beginPath();x.arc(bx,by,52,0,Math.PI*2);x.fill();x.restore();
+    x.strokeStyle="rgba(255,255,255,.9)";x.lineWidth=6;x.beginPath();x.moveTo(bx-38,by-32);x.quadraticCurveTo(bx,by,bx-38,by+32);x.moveTo(bx+38,by-32);x.quadraticCurveTo(bx,by,bx+38,by+32);x.stroke();
+    x.fillStyle="#fff";x.beginPath();x.arc(X+120,Y+h/2,86,0,Math.PI*2);x.shadowColor="rgba(0,0,0,.4)";x.shadowBlur=20;x.fill();x.shadowBlur=0;
+    const lg=await svgImg(logoSVG(sp,140));if(lg)x.drawImage(lg,X+50,Y+h/2-70,140,140);
+    const DC='"Barlow Condensed","Arial Narrow",sans-serif',BD='"Barlow",system-ui,sans-serif';
+    x.textAlign="left";x.fillStyle=claro?"#0a0d00":"#fff";let s=78;const nom=(sp.nombre||"").toUpperCase();
+    x.font=`italic 800 ${s}px ${DC}`;while(x.measureText(nom).width>w*.52&&s>36){s-=3;x.font=`italic 800 ${s}px ${DC}`}
+    x.shadowColor="rgba(0,0,0,.45)";x.shadowBlur=claro?0:10;x.fillText(nom,X+240,Y+h/2+(sp.lema||sp.giro?-2:s*.35));x.shadowBlur=0;
+    const sub=sp.lema||sp.giro||"";if(sub){let t=sub;x.font=`600 28px ${BD}`;while(x.measureText(t+"…").width>w*.5&&t.length>4)t=t.slice(0,-1);if(t!==sub)t+="…";x.fillText(t,X+242,Y+h/2+44)}
+    const tel=String(sp.contacto||"").replace(/\D/g,"");if(tel.length>=10){x.font=`800 26px ${DC}`;const tt="WHATSAPP "+tel.slice(-10).replace(/(\d{3})(\d{3})(\d{4})/,"$1 $2 $3");const tw=x.measureText(tt).width;
+      x.fillStyle=claro?"#0a0d00":"#d4ff1f";x.beginPath();x.roundRect?x.roundRect(X+242,Y+h/2+64,tw+28,40,8):x.rect(X+242,Y+h/2+64,tw+28,40);x.fill();x.fillStyle=claro?"#d4ff1f":"#0a0d00";x.fillText(tt,X+256,Y+h/2+93)}
+    x.textAlign="center";
+  }
+  x.restore();x.save();x.strokeStyle="rgba(255,255,255,.25)";x.lineWidth=2;x.beginPath();x.roundRect?x.roundRect(X+1,Y+1,w-2,h-2,rad):x.rect(X,Y,w,h);x.stroke();x.restore();
 }
 function mostrarPodio(blob,nombre,r){
   const url=URL.createObjectURL(blob);const file=new File([blob],nombre,{type:"image/png"});
@@ -1247,7 +1283,8 @@ document.addEventListener("click",async e=>{
   if(a==="resetPin"){const id=t.dataset.id;const r=await act("resetPin",{jugadorId:id});if(r){S.pinNuevo={id,pin:r.pin};S.cuentas=await call("jugadoresAdmin").catch(()=>S.cuentas);render();window.scrollTo(0,0)}return}
   if(a==="bloquear"){await act("estadoJugador",{jugadorId:t.dataset.id,estado:t.dataset.e},t.dataset.e==="bloqueado"?"Cuenta bloqueada":"Cuenta activa");S.cuentas=await call("jugadoresAdmin").catch(()=>S.cuentas);return render()}
   if(a==="podio"){const r0=S.retas[S.retaId];if(!r0)return;flash("Armando la imagen…");
-    try{const c=await podioCanvas(S.retaId,r0);const blob=await new Promise(res=>c.toBlob(res,"image/png"));mostrarPodio(blob,"podio-"+normTxt(clubName(r0)).replace(/[^a-z0-9]+/g,"-")+"-"+r0.fecha+".png",r0)}catch(er){console.warn(er);flash("No se pudo armar la imagen.")}return}
+    try{let c=await podioCanvas(S.retaId,r0);let blob=null;try{blob=await new Promise(res=>c.toBlob(res,"image/png"))}catch(er){}
+      if(!blob){for(const k in imgCache)imgCache[k]=null;c=await podioCanvas(S.retaId,r0);blob=await new Promise(res=>c.toBlob(res,"image/png"))}mostrarPodio(blob,"podio-"+normTxt(clubName(r0)).replace(/[^a-z0-9]+/g,"-")+"-"+r0.fecha+".png",r0)}catch(er){console.warn(er);flash("No se pudo armar la imagen.")}return}
   const rid=S.retaId,r=S.retas[rid];if(!r||!S.uid)return;
   if(a==="faltaUno"){t.disabled=true;try{const x=await call("faltaUno",{retaId:rid});S.retas[rid]=x.reta;S.version="";
       flash(x.avisados?`Listo: avisé a ${x.avisados} jugador${x.avisados>1?"es":""} de tu nivel.`:"No encontré más jugadores a quién avisar.")}catch(er){flash(er.message)}S.keepScroll=true;return render()}

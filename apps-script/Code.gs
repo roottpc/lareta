@@ -60,6 +60,7 @@ function api(token, accion, datos) {
     if (accion === 'publico') return ok_(todo_(null, datos.version));
     if (accion === 'vapid') return ok_({ llave: vapid_().pub });
     if (accion === 'pushPendiente') return ok_(pushPendiente_(datos));
+    if (accion === 'imagenPatro') return ok_(imagenPatro_(datos));
 
     var yo = sesion_(token);
     if (!yo) return { ok: false, error: 'Tu sesión terminó. Vuelve a entrar.', sesion: false };
@@ -777,6 +778,20 @@ function subirImagen_(yo, d) {
   var f = carpetaImagenes_().createFile(blob);
   f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   return { imagenId: f.getId() };
+}
+
+/** Devuelve la imagen de un patrocinador en base64 (para dibujarla en la imagen del podio). Solo imágenes de patrocinadores. */
+function imagenPatro_(d) {
+  var id = String(d.imagenId || '');
+  var ok = tabla_('PATROCINADORES').some(function (p) { return p.imagenId === id && p.activo !== false && String(p.activo) !== 'false'; });
+  if (!ok) falla_('Imagen no disponible.');
+  var c = CacheService.getScriptCache(), k = 'img_' + id, v = c.get(k);
+  if (v) return JSON.parse(v);
+  var b = DriveApp.getFileById(id).getBlob();
+  var r = { tipo: b.getContentType(), base64: Utilities.base64Encode(b.getBytes()) };
+  var txt = JSON.stringify(r);
+  if (txt.length < 95000) c.put(k, txt, 21600);
+  return r;
 }
 
 /* ===================== Jugadores (admin) ===================== */

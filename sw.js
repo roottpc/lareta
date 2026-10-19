@@ -1,5 +1,5 @@
 /* La Reta: guarda la app en el celular para que abra rápido; los datos siempre vienen del servidor. */
-const VERSION = 'lareta-v8';
+const VERSION = 'lareta-v9';
 const API_URL = 'https://script.google.com/macros/s/AKfycbz_vNGis8Z6NjIQAlXmCfak4rjexlT6C0Gu9oUy11U3eRSNObG5s55dEdAz0UhJkChtKg/exec';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/badge-96.png',
   'fonts/barlow-condensed-latin-600-normal.woff2', 'fonts/barlow-condensed-latin-700-normal.woff2', 'fonts/barlow-condensed-latin-800-normal.woff2',
@@ -41,7 +41,8 @@ self.addEventListener('push', e => {
     await self.registration.showNotification('La Reta', {
       body: a ? a.texto : 'Tienes un aviso nuevo en La Reta',
       icon: 'icons/icon-192.png', badge: 'icons/badge-96.png',
-      vibrate: [200, 100, 200], tag: a ? a.id : 'aviso', renotify: true,
+      vibrate: [200, 100, 200, 100, 200], tag: a ? a.id : 'aviso', renotify: true, silent: false,
+      requireInteraction: !/android|iphone|ipad|mobile/i.test(self.navigator.userAgent),
       data: { retaId: a ? a.retaId : '' }
     });
   })());

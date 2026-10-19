@@ -559,37 +559,41 @@ function permisoNotif(){return("Notification" in window)?Notification.permission
 const pushSoportado=()=>"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window;
 function b64aBytes(b){const p="=".repeat((4-b.length%4)%4);const r=atob((b+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))}
 async function activarPush(pedir){
-  if(!pushSoportado()||!S.uid)return false;
+  if(!S.uid)return false;
+  if(!pushSoportado()){S.pushErr="nosoporta";return false}
+  if(navigator.brave)S.esBrave=true;
   let p=Notification.permission;
   if(p==="default"&&pedir)p=await Notification.requestPermission();
   if(p!=="granted")return false;
   try{
     const reg=await navigator.serviceWorker.ready;
     let sub=await reg.pushManager.getSubscription();
-    if(!sub){const v=await call("vapid");sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64aBytes(v.llave)})}
-    await call("suscribir",{endpoint:sub.endpoint});S.pushOn=true;return true;
-  }catch(e){console.warn("push",e);return false}
+    if(!sub){let v;try{v=await call("vapid")}catch(er){S.pushErr="servidor";throw er}
+      try{sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64aBytes(v.llave)})}catch(er){S.pushErr=/brave/i.test(navigator.userAgent)||navigator.brave?"brave":"servicio";throw er}}
+    await call("suscribir",{endpoint:sub.endpoint});S.pushOn=true;S.pushErr=null;return true;
+  }catch(e){console.warn("push",e);if(!S.pushErr)S.pushErr="servicio";return false}
 }
 function avisoPushHTML(){
   if(!S.uid||S.pushOn||S.pushNo)return"";
   if(esIOS()&&!esStandalone())return`<div class="install"><div><b>Recibe avisos en tu iPhone</b><div class="muted small">Primero instala La Reta: Compartir → Agregar a pantalla de inicio, y ábrela desde el ícono.</div></div><button class="btn ghost sm" data-act="pushNo">Ahora no</button></div>`;
   if(!pushSoportado()||permisoNotif()!=="default")return"";
-  return`<div class="install"><div><b>Activa las notificaciones</b><div class="muted small">Tu celular vibrará cuando alguien se apunte a tus retas, aunque la app esté cerrada.</div></div><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn ghost sm" data-act="pushNo">Ahora no</button><button class="btn primary sm" data-act="permiso">Activar</button></span></div>`;
+  return`<div class="install"><div><b>Activa las notificaciones</b><div class="muted small">${esPC()?"Tu computadora te avisará con sonido":"Tu celular vibrará"} cuando haya retas nuevas o alguien se apunte, aunque la app esté cerrada.</div></div><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn ghost sm" data-act="pushNo">Ahora no</button><button class="btn primary sm" data-act="permiso">Activar</button></span></div>`;
 }
 function vAvisos(){
   const l=S.avisos||[];const p=permisoNotif();
   if(l.some(a=>!a.leido)&&!S.leyendo){S.leyendo=true;setTimeout(()=>call("leerAvisos").then(()=>{(S.avisos||[]).forEach(a=>a.leido=true);S.leyendo=false;S.version="";S.keepScroll=true;render()}).catch(()=>{S.leyendo=false}),1500)}
   return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="retas">← Retas</button></div><h1>Avisos</h1>
   ${p==="default"||(esIOS()&&!esStandalone())?(S.pushNo=false,avisoPushHTML()):""}
-  ${p==="granted"&&S.pushOn?`<p class="muted small" style="margin:0">Notificaciones activadas en este celular.</p>`:""}
-  ${p==="denied"?`<div class="banner">Las notificaciones están bloqueadas en este celular. Actívalas en los ajustes del navegador para La Reta.</div>`:""}
+  ${ayudaPush()}
+  <div class="panel row between"><div><b>Sonido de avisos</b><div class="muted small">Suena cuando llega un aviso con La Reta abierta${esPC()?" (ideal para la computadora del club)":""}.</div></div>
+    <span class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn sm" data-act="sonido">${sonidoOn()?"Sonido: sí":"Sonido: no"}</button><button class="btn sm" data-act="probarAviso">Probar</button></span></div>
   <div class="panel">${l.length?l.map(a=>`<button class="av ${a.leido?"":"nuevo"}" data-act="${a.retaId&&S.retas[a.retaId]?"open":"noop"}" data-id="${esc(a.retaId)}"><span class="dot"></span><span><div class="tx">${esc(a.texto)}</div><div class="muted small">${esc(haceCuanto(a.creado))}</div></span></button>`).join("")
     :`<div class="empty"><strong>Sin avisos</strong>Aquí verás cuando alguien se apunte o se salga de tus retas.</div>`}</div></div>`;
 }
 function notificar(a){
-  flash(a.texto);try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}
+  flash(a.texto);sonar();parpadearTitulo((S.avisos||[]).filter(x=>!x.leido).length+1);try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}
   if(permisoNotif()!=="granted"||!navigator.serviceWorker)return;
-  navigator.serviceWorker.ready.then(reg=>reg.showNotification("La Reta",{body:a.texto,icon:"icons/icon-192.png",badge:"icons/badge-96.png",tag:a.id,vibrate:[200,100,200],data:{retaId:a.retaId}})).catch(()=>{});
+  navigator.serviceWorker.ready.then(reg=>reg.showNotification("La Reta",{body:a.texto,icon:"icons/icon-192.png",badge:"icons/badge-96.png",tag:a.id,vibrate:[200,100,200],requireInteraction:esPC(),data:{retaId:a.retaId}})).catch(()=>{});
 }
 const APP_URL="https://roottpc.github.io/lareta/";
 const WA_SVG='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg>';
@@ -706,6 +710,35 @@ function vClub(){
       ${S.clubFotos.length<8?`<input id="c-fotos" type="file" accept="image/*" multiple data-act="fotosClub">`:""}
       <span class="muted small">Se reducen solas para que carguen rápido. Toca × para quitar una.</span></div>
     <button class="btn primary" type="submit">${c.id?"Guardar cambios":"Registrar club"}</button></form></div>`}
+
+
+/* ---------- sonido y diagnóstico ---------- */
+let audioCtx=null;
+function desbloquearAudio(){try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume()}catch(e){}}
+document.addEventListener("pointerdown",desbloquearAudio,{passive:true});document.addEventListener("keydown",desbloquearAudio);
+function sonidoOn(){try{return localStorage.getItem("lareta_sonido")!=="0"}catch(e){return true}}
+function sonar(){
+  if(!sonidoOn())return;desbloquearAudio();if(!audioCtx)return;
+  const t0=audioCtx.currentTime+.02;
+  [[1318.5,0],[1760,.16],[2093,.32]].forEach(([f,d])=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type="sine";o.frequency.value=f;
+    g.gain.setValueAtTime(0,t0+d);g.gain.linearRampToValueAtTime(.35,t0+d+.02);g.gain.exponentialRampToValueAtTime(.001,t0+d+.45);
+    o.connect(g).connect(audioCtx.destination);o.start(t0+d);o.stop(t0+d+.5)});
+}
+let tituloBase=document.title,tituloTimer=null;
+function parpadearTitulo(n){clearInterval(tituloTimer);if(!n){document.title=tituloBase;return}let on=false;
+  tituloTimer=setInterval(()=>{on=!on;document.title=on?`(${n}) Nuevo aviso · La Reta`:tituloBase;if(!document.hidden&&S.view==="avisos"){clearInterval(tituloTimer);document.title=tituloBase}},1000)}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.view==="avisos")parpadearTitulo(0)});
+const esPC=()=>!/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+function ayudaPush(){
+  const p=permisoNotif();const disp=esPC()?"esta computadora":"este celular";
+  if(S.pushOn)return`<div class="banner" style="border-left:3px solid var(--good)"><b>Notificaciones activas en ${disp}.</b> ${esPC()?"Si no ves ni oyes el aviso, revisa que Windows o Mac no tenga “No molestar” activado y que el navegador tenga permiso de notificaciones en la configuración del sistema.":""}</div>`;
+  if(S.pushErr==="nosoporta"||p==="no")return`<div class="banner"><b>Este navegador no permite notificaciones.</b> Usa Chrome, Edge o Firefox actualizados.${esIOS()?" En iPhone: agrega La Reta a la pantalla de inicio y ábrela desde el ícono.":""} Con la app abierta igual te sonará cada aviso.</div>`;
+  if(p==="denied")return`<div class="banner"><b>Las notificaciones están bloqueadas.</b> ${esPC()?"Da clic en el ícono junto a la dirección de la página (candado o ajustes) → <b>Notificaciones: Permitir</b> → recarga la página.":"Abre los ajustes del navegador → Configuración de sitios → Notificaciones → permite roottpc.github.io, y vuelve a abrir La Reta."}</div>`;
+  if(S.pushErr==="brave")return`<div class="banner"><b>Brave tiene apagado el servicio de notificaciones.</b> Ve a Configuración → Privacidad y seguridad → activa <b>“Usar los servicios de Google para mensajería push”</b>, reinicia Brave y toca Activar otra vez. O usa Chrome o Edge.</div>`;
+  if(S.pushErr==="servicio")return`<div class="banner"><b>El navegador no pudo registrar las notificaciones.</b> Prueba en Chrome o Edge, revisa que no estés en ventana de incógnito y vuelve a tocar Activar. Mientras, con la app abierta te sonará cada aviso.</div>`;
+  if(S.pushErr==="servidor")return`<div class="banner"><b>El servidor no respondió.</b> Intenta de nuevo en un momento.</div>`;
+  return"";
+}
 
 function vWelcome(){
   const nP=Object.keys(S.players).length,nR=Object.keys(S.retas).length,nC=Object.keys(S.clubs).length;const of=oficial();
@@ -901,9 +934,11 @@ document.addEventListener("click",async e=>{
   if(a==="pushNo"){S.pushNo=true;try{localStorage.setItem("lareta_pushNo",String(Date.now()))}catch(er){}S.keepScroll=true;return render()}
   if(a==="permiso"){const okp=await activarPush(true);
     if(okp){flash("Notificaciones activadas");navigator.serviceWorker.ready.then(g=>g.showNotification("La Reta",{body:"Así te avisaremos cuando alguien se apunte a tus retas.",icon:"icons/icon-192.png",badge:"icons/badge-96.png",vibrate:[200,100,200],tag:"prueba"}))}
-    else if(permisoNotif()==="denied")flash("Bloqueaste las notificaciones. Actívalas en los ajustes del navegador.");
-    else flash("No se pudieron activar en este celular.");
+    else flash("No se pudieron activar. Mira la explicación en Avisos.");
+    if(!okp&&S.view!=="avisos")return go("avisos");
     S.keepScroll=true;return render()}
+  if(a==="sonido"){try{localStorage.setItem("lareta_sonido",sonidoOn()?"0":"1")}catch(er){}if(sonidoOn())sonar();S.keepScroll=true;return render()}
+  if(a==="probarAviso"){desbloquearAudio();sonar();try{const r=await call("probarPush");flash(r.dispositivos?"Listo: te llegará una notificación de prueba.":"Sonido probado. Activa las notificaciones para recibirlas con la app cerrada.");S.version="";setTimeout(()=>refresh(false),1500)}catch(er){flash(er.message)}return}
   if(a==="regclub"){S.afterReg="club";return go(S.uid?"club":"registro")}
   if(a==="nueva"){if(!S.uid)return go("inicio");return go("nueva",{draft:newDraft()})}
   if(a==="open")return go("reta",{retaId:t.dataset.id,compartir:null});
@@ -1013,7 +1048,7 @@ if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.ser
   const mh=location.hash.match(/^#reta-([A-Za-z0-9_-]+)$/);
   if(mh&&S.retas[mh[1]]){S.welcomed=true;go("reta",{retaId:mh[1]});try{history.replaceState(null,"",location.pathname)}catch(e){}}
   if(navigator.serviceWorker)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.retaId&&S.retas[e.data.retaId])go("reta",{retaId:e.data.retaId});else if(S.uid)go("avisos")});
-  setInterval(()=>{if(S.dirty)return;if(document.hidden&&Date.now()-(S.ultimoBg||0)<60000)return;if(document.hidden)S.ultimoBg=Date.now();const ae=document.activeElement;if(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName))return;refresh(false)},20000);
+  setInterval(()=>{if(S.dirty)return;if(document.hidden&&Date.now()-(S.ultimoBg||0)<60000)return;if(document.hidden)S.ultimoBg=Date.now();const ae=document.activeElement;if(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName))return;refresh(false)},15000);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh(false)});
 })();
 </script>

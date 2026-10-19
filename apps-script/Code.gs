@@ -82,6 +82,7 @@ function api(token, accion, datos) {
       borrarPatrocinador: function () { return borrarPatro_(yo, datos); },
       subirImagen: function () { return subirImagen_(yo, datos); },
       leerAvisos: function () { return leerAvisos_(yo); },
+      probarPush: function () { return probarPush_(yo); },
       suscribir: function () { return suscribir_(yo, datos); },
       jugadoresAdmin: function () { return jugadoresAdmin_(yo); },
       resetPin: function () { return resetPin_(yo, datos); },
@@ -486,8 +487,18 @@ function avisar_(paraId, tipo, texto, retaId, deId) {
   guardar_('AVISOS', { id: nuevoId_('a'), paraId: paraId, tipo: tipo, texto: texto, retaId: retaId || '', deId: deId || '', creado: ahora_(), leido: '' });
   try { enviarPush_([paraId]); } catch (e) { console.warn('push', e); }
 }
+function normTxt_(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); }
+function clubDeReta_(r) {
+  var k = normTxt_(r.club), t = tabla_('CLUBS');
+  if (!k) return null;
+  for (var i = 0; i < t.length; i++) if (normTxt_(t[i].nombre) === k) return t[i];
+  return null;
+}
+function canchasTxt_(r) { return r.canchas + ' cancha' + (r.canchas > 1 ? 's' : ''); }
 function avisarNuevaReta_(yo, r) {
-  var para = tabla_('JUGADORES').filter(function (j) { return j.celular && j.estado !== 'bloqueado' && j.id !== yo.id; }).map(function (j) { return j.id; });
+  var club = clubDeReta_(r), dueno = club && club.ownerId !== yo.id ? club.ownerId : '';
+  if (dueno) avisar_(dueno, 'club', 'Nueva reta en tu club: ' + retaCorta_(r) + ' · ' + canchasTxt_(r) + ' · ' + nombreCorto_(yo.id) + ' organiza', r.id, yo.id);
+  var para = tabla_('JUGADORES').filter(function (j) { return j.celular && j.estado !== 'bloqueado' && j.id !== yo.id && j.id !== dueno; }).map(function (j) { return j.id; });
   if (!para.length) return;
   var texto = 'Nueva reta: ' + retaCorta_(r) + ' · ' + (r.tipo === 'fija' ? 'Pareja fija' : 'Royal') + ' · ' + r.maxJugadores + ' lugares. ¡Apúntate!';
   var h = hoja_('AVISOS'), cols = HOJAS.AVISOS, ahora = ahora_();
@@ -511,6 +522,8 @@ function avisarInscritos_(yo, r, antes, nueva) {
     if (x === yo.id) avisar_(r.creadorId, 'salio', nombreCorto_(x) + ' se salió de tu reta de ' + donde + cupo, r.id, yo.id);
   });
   if (agregados.length && nueva.length >= r.maxJugadores && antes.length < r.maxJugadores) {
+    var cl = clubDeReta_(r);
+    if (cl && cl.ownerId !== r.creadorId) avisar_(cl.ownerId, 'club', 'Se llenó la reta de ' + donde + ' en tu club (' + nueva.length + '/' + r.maxJugadores + '). Confirmen ' + canchasTxt_(r) + '.', r.id, yo.id);
     avisar_(r.creadorId, 'llena', 'Tu reta de ' + donde + ' ya está llena (' + nueva.length + '/' + r.maxJugadores + '). Ya puedes sortear los partidos.', r.id, yo.id);
   }
 }
@@ -585,7 +598,18 @@ function borrarReta_(yo, d) {
       delete CACHE_TABLAS_[h];
     });
     borrar_('RETAS', r.id);
+    var txt = 'Se canceló la reta de ' + retaCorta_(r);
+    var cl = clubDeReta_(r);
+    if (cl) avisar_(cl.ownerId, 'club', txt + '. Se liberan ' + canchasTxt_(r) + ' en tu club.', '', yo.id);
+    (r.jugadores || []).forEach(function (x) { if (!cl || x !== cl.ownerId) avisar_(x, 'cancelada', txt + '.', '', yo.id); });
     return true;
+  });
+}
+function probarPush_(yo) {
+  return conCandado_(function () {
+    guardar_('AVISOS', { id: nuevoId_('a'), paraId: yo.id, tipo: 'prueba', texto: 'Prueba: así te llegarán los avisos de La Reta 🎾', retaId: '', deId: '', creado: ahora_(), leido: '' });
+    var n = 0; try { n = enviarPush_([yo.id]); } catch (e) {}
+    return { dispositivos: n };
   });
 }
 

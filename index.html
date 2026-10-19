@@ -130,6 +130,12 @@ tr.first .pos{color:var(--ball);text-shadow:var(--glow)}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--head);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
 nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(2,1fr)}
+.share{display:flex;gap:10px;flex-wrap:wrap}
+.share .btn{flex:1 1 140px}
+.btn.wa{background:#25d366;border-color:#25d366;color:#04210f;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.btn.wa svg{width:20px;height:20px;flex:none}
+.preview{white-space:pre-wrap;font-size:14px;line-height:1.45;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;max-height:260px;overflow:auto;user-select:text}
+.chip.falta{background:transparent;border:1px solid var(--ball);color:var(--ball)}
 .hd-r{display:flex;align-items:center;gap:10px;min-width:0}
 .bell{position:relative;appearance:none;border:1px solid var(--line);background:transparent;color:var(--ink);width:42px;height:42px;border-radius:50%;display:grid;place-items:center;cursor:pointer;flex:none}
 .bell svg{width:22px;height:22px}
@@ -359,7 +365,8 @@ function retaCard([id,r]){
   return`<button class="card" data-act="open" data-id="${esc(id)}">
     <div class="row between"><span class="when">${esc(fmtDate(r.fecha))} · ${esc(fmtHora(r.hora))}</span><span class="chip ${st.cls}">${esc(st.label)}</span></div>
     <div class="row between" style="margin-top:4px"><span style="font-weight:600">${esc(clubName(r))}</span>
-    <span class="muted small">${r.tipo==="fija"?"Pareja fija":"Royal"} · ${n}/${r.maxJugadores||"∞"} jugadores · ${r.canchas} cancha${r.canchas>1?"s":""}</span></div></button>`;
+    <span class="muted small">${r.tipo==="fija"?"Pareja fija":"Royal"} · ${n}/${r.maxJugadores||"∞"} jugadores · ${r.canchas} cancha${r.canchas>1?"s":""}</span></div>
+    ${!(r.partidos||[]).length&&r.maxJugadores>n?`<div class="row" style="margin-top:8px"><span class="chip falta">${r.maxJugadores-n===1?"Falta 1 lugar":"Faltan "+(r.maxJugadores-n)+" lugares"}</span>${S.uid&&(r.jugadores||[]).includes(S.uid)?`<span class="chip">Ya estás apuntado</span>`:""}</div>`:""}</button>`;
 }
 function vRetas(){
   const all=Object.entries(S.retas).sort(retaOrder);
@@ -441,12 +448,14 @@ function vReta(){
     <div class="row" style="font-family:var(--f-display);font-size:20px;font-weight:700;text-transform:uppercase">${esc(fmtDate(r.fecha))} · ${esc(fmtHora(r.hora))}</div>
     <div class="row"><span class="chip">${r.canchas} cancha${r.canchas>1?"s":""}</span><span class="chip">${ins.length}/${r.maxJugadores} jugadores</span><span class="chip">${r.modo==="total"?`${r.puntos} puntos totales`:`A ${r.puntos} puntos`}</span></div>
     ${(r.reglas||[]).length?`<div><span class="label">Reglas</span><ul class="rules">${r.reglas.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
-  </div>`;
+    <button class="btn wa" data-act="compartir">${WA_SVG}Compartir reta</button>
+  </div>
+  ${S.compartir===id?compartirHTML(id,r):""}`;
   const meIn=S.uid&&ins.includes(S.uid);const hasMe=S.uid&&S.players[S.uid];
   h+=`<div class="section-head"><h2>Jugadores</h2><span class="row" style="gap:6px">
     ${J&&!ps.length&&hasMe?(meIn?`<button class="btn sm" data-act="leave">Salirme</button>`:`<button class="btn sm ball" data-act="join" ${ins.length>=r.maxJugadores?"disabled":""}>Me apunto</button>`):""}
     ${C&&!ps.length?`<button class="btn sm" data-act="toggleIns">${S.showInscribir?"Listo":"Inscribir a otros"}</button>`:""}</span></div>
-  ${!J&&!ps.length?`<div class="banner"><button class="btn ghost sm" data-act="tab" data-v="inicio" style="text-decoration:underline;padding:0 2px;min-height:0">Entra o regístrate</button> para apuntarte a esta reta.</div>`:""}`;
+  ${!J&&!ps.length?`<div class="install"><div><b>¿Te apuntas?</b><div class="muted small">Entra o regístrate con tu celular y vuelves directo a esta reta.</div></div><button class="btn primary sm" data-act="entrarReta">Entrar</button></div>`:""}`;
   if(S.showInscribir&&C&&!ps.length){
     const all=Object.entries(S.players).sort((a,b)=>pname(a[0]).localeCompare(pname(b[0])));
     h+=`<div class="panel">${all.length?all.map(([pid])=>`<label class="check"><input type="checkbox" data-act="ins" data-id="${esc(pid)}" ${ins.includes(pid)?"checked":""} ${!ins.includes(pid)&&ins.length>=r.maxJugadores?"disabled":""}><span><b>${esc(pname(pid))}</b> <span class="muted small">${esc(pfull(pid))}</span></span></label>`).join(""):`<p class="muted" style="margin:0">Todavía nadie se ha registrado.</p>`}</div>`;
@@ -539,6 +548,29 @@ function notificar(a){
   if(permisoNotif()!=="granted"||!navigator.serviceWorker)return;
   navigator.serviceWorker.ready.then(reg=>reg.showNotification("La Reta",{body:a.texto,icon:"icons/icon-192.png",badge:"icons/badge-96.png",tag:a.id,vibrate:[200,100,200],data:{retaId:a.retaId}})).catch(()=>{});
 }
+const APP_URL="https://roottpc.github.io/lareta/";
+const WA_SVG='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z"/></svg>';
+function textoReta(id,r){
+  const ins=r.jugadores||[];const f=r.fecha?new Date(r.fecha+"T12:00"):null;
+  const dia=f?f.toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"}):"";
+  const falt=Math.max(0,(r.maxJugadores||0)-ins.length);const ps=(r.partidos||[]).length;
+  const L=["🎾 *RETA DE PÁDEL*","",`📍 *${clubName(r)}*`,`📅 ${dia.charAt(0).toUpperCase()+dia.slice(1)}`,`🕖 ${fmtHora(r.hora)}`,
+    `🏓 ${r.tipo==="fija"?"Pareja fija":"Royal"} · ${r.modo==="total"?r.puntos+" puntos totales":"a "+r.puntos+" puntos"} · ${r.canchas} cancha${r.canchas>1?"s":""}`];
+  if((r.reglas||[]).length)L.push(`📋 ${r.reglas.join(" · ")}`);
+  L.push("",`👥 *Jugadores (${ins.length}/${r.maxJugadores})*`);
+  ins.forEach((p,i)=>L.push(`${i+1}. ${pname(p)}`));
+  if(!ins.length)L.push("Todavía nadie, ¡sé el primero!");
+  L.push("");
+  if(ps)L.push("✅ Partidos ya sorteados");
+  else L.push(falt?`⏳ *${falt===1?"Falta 1 lugar":"Faltan "+falt+" lugares"}*`:"✅ *Reta llena*");
+  L.push("",falt&&!ps?"Apúntate aquí 👇":"Ver la reta 👇",APP_URL+"#reta-"+id);
+  return L.join("\n");
+}
+function compartirHTML(id,r){const t=textoReta(id,r);
+  return`<div class="panel stack"><div class="row between"><h3>Compartir reta</h3><button class="btn ghost sm" data-act="compartir">Cerrar</button></div>
+  <div class="preview" id="txt-compartir">${esc(t)}</div>
+  <div class="share"><a class="btn wa" href="https://wa.me/?text=${encodeURIComponent(t)}" target="_blank" rel="noopener">${WA_SVG}Enviar por WhatsApp</a>
+  <button class="btn" data-act="copiar">Copiar texto</button>${navigator.share?`<button class="btn" data-act="masApps">Otras apps</button>`:""}</div></div>`}
 function vWelcome(){
   const nP=Object.keys(S.players).length,nR=Object.keys(S.retas).length,nC=Object.keys(S.clubs).length;const of=oficial();
   return`<div class="wel"><div><p class="big">Bienvenido</p><p class="muted" style="margin:6px 0 0">Retas, marcadores y ranking del pádel en Tepic. ${nP} jugadores, ${nC} clubs y ${nR} retas registradas.</p></div>
@@ -727,7 +759,11 @@ document.addEventListener("click",async e=>{
   if(a==="tab"){const v=t.dataset.v;if(v==="cuentas"){S.cuentas=null;call("jugadoresAdmin").then(l=>{S.cuentas=l;S.keepScroll=true;render()}).catch(er=>flash(er.message))}
     if((v==="perfil"||v==="club")&&!S.uid&&v!=="club")return go("inicio");return go(v)}
   if(a==="skip"){S.welcomed=true;return go("retas")}
+  if(a==="entrarReta"){S.volverReta=S.retaId;return go("inicio")}
   if(a==="noop")return;
+  if(a==="compartir"){S.compartir=S.compartir===S.retaId?null:S.retaId;S.keepScroll=true;return render()}
+  if(a==="copiar"){const r=S.retas[S.retaId];const t=textoReta(S.retaId,r);try{await navigator.clipboard.writeText(t);flash("Texto copiado. Pégalo en tu grupo.")}catch(er){const el=document.getElementById("txt-compartir");const rg=document.createRange();rg.selectNodeContents(el);const sel=getSelection();sel.removeAllRanges();sel.addRange(rg);flash("Mantén presionado para copiar")}return}
+  if(a==="masApps"){const r=S.retas[S.retaId];try{await navigator.share({title:"Reta de pádel",text:textoReta(S.retaId,r)})}catch(er){}return}
   if(a==="pushNo"){S.pushNo=true;try{localStorage.setItem("lareta_pushNo",String(Date.now()))}catch(er){}S.keepScroll=true;return render()}
   if(a==="permiso"){const okp=await activarPush(true);
     if(okp){flash("Notificaciones activadas");navigator.serviceWorker.ready.then(g=>g.showNotification("La Reta",{body:"Así te avisaremos cuando alguien se apunte a tus retas.",icon:"icons/icon-192.png",badge:"icons/badge-96.png",vibrate:[200,100,200],tag:"prueba"}))}
@@ -736,7 +772,7 @@ document.addEventListener("click",async e=>{
     S.keepScroll=true;return render()}
   if(a==="regclub"){S.afterReg="club";return go(S.uid?"club":"registro")}
   if(a==="nueva"){if(!S.uid)return go("inicio");return go("nueva",{draft:newDraft()})}
-  if(a==="open")return go("reta",{retaId:t.dataset.id});
+  if(a==="open")return go("reta",{retaId:t.dataset.id,compartir:null});
   if(a==="addrule"){const f=t.closest("form");readDraft(f);const x=(S.draft.extra||"").trim();if(x&&!S.draft.reglas.includes(x))S.draft.reglas.push(x);S.draft.extra="";S.keepScroll=true;document.activeElement.blur();return render()}
   if(a==="delrule"){readDraft(t.closest("form"));S.draft.reglas=S.draft.reglas.filter(r=>r!==t.dataset.i);S.keepScroll=true;return render()}
   if(a==="noimg"){S.sponImg="";S.keepScroll=true;return render()}
@@ -790,12 +826,12 @@ document.addEventListener("submit",async e=>{
   document.activeElement?.blur();
   if(kind==="login"){const cel=g("celular").replace(/\D/g,""),pin=g("pin");
     if(cel.length!==10)return flash("Escribe tu celular a 10 dígitos.");if(!/^\d{6}$/.test(pin))return flash("El PIN es de 6 números.");
-    try{const r=await call("entrar",{celular:cel,pin});setTok(r.token);S.welcomed=true;S.version="";await refresh(true);go("retas");activarPush(false);flash("Hola, "+(r.yo.alias||r.yo.nombre))}catch(er){flash(er.message)}return}
+    try{const r=await call("entrar",{celular:cel,pin});setTok(r.token);S.welcomed=true;S.version="";await refresh(true);if(S.volverReta&&S.retas[S.volverReta]){go("reta",{retaId:S.volverReta});S.volverReta=null}else go("retas");activarPush(false);flash("Hola, "+(r.yo.alias||r.yo.nombre))}catch(er){flash(er.message)}return}
   if(kind==="registro"){const cel=g("celular").replace(/\D/g,""),pin=g("pin");
     if(!g("nombre"))return flash("Escribe tu nombre.");if(cel.length!==10)return flash("Escribe tu celular a 10 dígitos.");
     if(!/^\d{6}$/.test(pin))return flash("El PIN debe ser de 6 números.");if(pin!==g("pin2"))return flash("Los dos PIN no coinciden.");
     try{const r=await call("registro",{nombre:g("nombre"),apellido:g("apellido"),alias:g("alias"),celular:cel,pin});setTok(r.token);S.welcomed=true;S.version="";await refresh(true);
-      const next=S.afterReg==="club"?"club":"retas";S.afterReg=null;go(next);flash(r.yo.rol==="ADMIN"?"Cuenta creada. Eres el administrador.":"¡Listo! Ya estás registrado.")}catch(er){flash(er.message)}return}
+      const next=S.afterReg==="club"?"club":"retas";S.afterReg=null;if(next==="retas"&&S.volverReta&&S.retas[S.volverReta]){go("reta",{retaId:S.volverReta});S.volverReta=null}else go(next);activarPush(false);flash(r.yo.rol==="ADMIN"?"Cuenta creada. Eres el administrador.":"¡Listo! Ya estás registrado.")}catch(er){flash(er.message)}return}
   if(kind==="perfil"){if(!g("nombre"))return flash("Escribe tu nombre.");return act("perfil",{nombre:g("nombre"),apellido:g("apellido"),alias:g("alias")},"Perfil guardado")}
   if(kind==="pin"){if(!/^\d{6}$/.test(g("nuevo")))return flash("El PIN nuevo debe ser de 6 números.");if(g("nuevo")!==g("nuevo2"))return flash("Los PIN nuevos no coinciden.");
     const r=await act("cambiarPin",{actual:g("actual"),nuevo:g("nuevo")});if(r){S.showPin=false;render();flash("PIN cambiado")}return}
@@ -836,6 +872,8 @@ if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.ser
   render();
   if(S.uid&&permisoNotif()==="granted")activarPush(false).then(o=>{if(o){S.keepScroll=true;render()}});
   if(location.hash==="#avisos"&&S.uid){S.view="avisos";render()}
+  const mh=location.hash.match(/^#reta-([A-Za-z0-9_-]+)$/);
+  if(mh&&S.retas[mh[1]]){S.welcomed=true;go("reta",{retaId:mh[1]});try{history.replaceState(null,"",location.pathname)}catch(e){}}
   if(navigator.serviceWorker)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.retaId&&S.retas[e.data.retaId])go("reta",{retaId:e.data.retaId});else if(S.uid)go("avisos")});
   setInterval(()=>{if(S.dirty)return;if(document.hidden&&Date.now()-(S.ultimoBg||0)<60000)return;if(document.hidden)S.ultimoBg=Date.now();const ae=document.activeElement;if(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName))return;refresh(false)},20000);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh(false)});

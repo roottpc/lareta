@@ -385,6 +385,7 @@ function crearReta_(yo, d) {
       jugadores: [], partidos: [], creado: ahora_()
     };
     guardar_('RETAS', r);
+    avisarNuevaReta_(yo, r);
     return limpio_(r);
   });
 }
@@ -433,7 +434,19 @@ function tieneCuenta_(id) { var j = buscar_('JUGADORES', id); return !!(j && j.c
 function avisar_(paraId, tipo, texto, retaId, deId) {
   if (!paraId || paraId === deId || !tieneCuenta_(paraId)) return;
   guardar_('AVISOS', { id: nuevoId_('a'), paraId: paraId, tipo: tipo, texto: texto, retaId: retaId || '', deId: deId || '', creado: ahora_(), leido: '' });
-  try { enviarPush_(paraId); } catch (e) { console.warn('push', e); }
+  try { enviarPush_([paraId]); } catch (e) { console.warn('push', e); }
+}
+function avisarNuevaReta_(yo, r) {
+  var para = tabla_('JUGADORES').filter(function (j) { return j.celular && j.estado !== 'bloqueado' && j.id !== yo.id; }).map(function (j) { return j.id; });
+  if (!para.length) return;
+  var texto = 'Nueva reta: ' + retaCorta_(r) + ' · ' + (r.tipo === 'fija' ? 'Pareja fija' : 'Royal') + ' · ' + r.maxJugadores + ' lugares. ¡Apúntate!';
+  var h = hoja_('AVISOS'), cols = HOJAS.AVISOS, ahora = ahora_();
+  var filas = para.map(function (id) { return { id: nuevoId_('a'), paraId: id, tipo: 'nueva', texto: texto, retaId: r.id, deId: yo.id, creado: ahora, leido: '' }; });
+  var ini = h.getLastRow() + 1;
+  h.getRange(ini, 1, filas.length, cols.length).setNumberFormat('@').setValues(filas.map(function (o) { return cols.map(function (c) { return aCelda_(c, o[c]); }); }));
+  delete CACHE_TABLAS_.AVISOS;
+  tocar_();
+  try { enviarPush_(para); } catch (e) { console.warn('push', e); }
 }
 function avisarInscritos_(yo, r, antes, nueva) {
   var agregados = nueva.filter(function (x) { return antes.indexOf(x) < 0; });
@@ -765,8 +778,9 @@ function suscribir_(yo, d) {
     return true;
   });
 }
-function enviarPush_(jugadorId) {
-  var subs = tabla_('SUSCRIPCIONES').filter(function (s) { return s.jugadorId === jugadorId; });
+function enviarPush_(ids) {
+  var quien = {}; (ids || []).forEach(function (x) { quien[x] = 1; });
+  var subs = tabla_('SUSCRIPCIONES').filter(function (s) { return quien[s.jugadorId]; });
   if (!subs.length) return 0;
   var reqs = subs.map(function (s) {
     var t = jwtVapid_(s.endpoint);

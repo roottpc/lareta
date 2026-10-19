@@ -605,8 +605,17 @@ function vReta(){
     ${C&&!ps.length?`<button class="btn sm" data-act="toggleIns">${S.showInscribir?"Listo":"Inscribir a otros"}</button>`:""}</span></div>
   ${!J&&!ps.length?`<div class="install"><div><b>¿Te apuntas?</b><div class="muted small">Entra o regístrate con tu celular y vuelves directo a esta reta.</div></div><button class="btn primary sm" data-act="entrarReta">Entrar</button></div>`:""}`;
   if(S.showInscribir&&C&&!ps.length){
-    const all=Object.entries(S.players).sort((a,b)=>pname(a[0]).localeCompare(pname(b[0])));
-    h+=`<div class="panel">${all.length?all.map(([pid])=>`<label class="check"><input type="checkbox" data-act="ins" data-id="${esc(pid)}" ${ins.includes(pid)?"checked":""} ${!ins.includes(pid)&&ins.length>=r.maxJugadores?"disabled":""}><span><b>${esc(pname(pid))}</b> <span class="muted small">${esc(pfull(pid))}</span></span></label>`).join(""):`<p class="muted" style="margin:0">Todavía nadie se ha registrado.</p>`}</div>`;
+    const all=Object.entries(S.players).sort((a,b)=>(ins.includes(b[0])-ins.includes(a[0]))||pname(a[0]).localeCompare(pname(b[0])));
+    h+=`<div class="panel stack">
+      <div class="field"><label class="label" for="ins-q">Buscar por alias, nombre o celular</label><input id="ins-q" data-buscar="ins" type="search" inputmode="search" autocomplete="off" placeholder="Ej. Tito o 3111234567"></div>
+      <div id="ins-cel"></div>
+      <div id="ins-lista" style="max-height:340px;overflow:auto">${all.length?all.map(([pid])=>{const p=S.players[pid]||{};return`<label class="check" data-q="${esc(normTxt([p.alias,p.nombre,p.apellido].join(" ")))}"><input type="checkbox" data-act="ins" data-id="${esc(pid)}" ${ins.includes(pid)?"checked":""} ${!ins.includes(pid)&&ins.length>=r.maxJugadores?"disabled":""}><span><b>${esc(pname(pid))}</b>${nvTag(pid)} <span class="muted small">${esc(pfull(pid))}${p.pendiente?" · sin PIN aún":""}</span></span></label>`}).join(""):`<p class="muted" style="margin:0">Todavía nadie se ha registrado.</p>`}</div>
+      <p class="muted small" id="ins-nada" style="margin:0" hidden>No hay nadie con ese nombre. Agrégalo abajo con su celular.</p>
+      <form class="stack" data-form="nuevoJug" style="gap:10px;border-top:1px solid var(--line);padding-top:12px"><b>¿No está? Agrégalo</b>
+        <div class="grid2"><div class="field"><label class="label" for="nj-ali">Alias</label><input id="nj-ali" name="alias" placeholder="Como le dicen" autocomplete="off"></div>
+        <div class="field"><label class="label" for="nj-cel">Celular</label><input id="nj-cel" name="celular" type="tel" inputmode="numeric" placeholder="10 dígitos" autocomplete="off"></div></div>
+        <p class="muted small" style="margin:0">Queda inscrito en la reta. Cuando se registre con ese número crea su PIN y conserva sus puntos.</p>
+        <button class="btn ball" type="submit" ${ins.length>=r.maxJugadores?"disabled":""}>Agregar e inscribir</button></form></div>`;
   }
   if(!ins.length)h+=`<div class="panel empty"><strong>Nadie inscrito</strong>${J?"Toca Me apunto para entrar a la reta.":"Aún no hay jugadores en esta reta."}</div>`;
   else if(fija){
@@ -937,6 +946,24 @@ function vClub(){
   <div class="guardar-bar"><button type="button" class="btn primary" style="width:100%" data-act="guardarClub">${c?"Guardar cambios":"Registrar club"}</button></div></div>`;
 }
 
+/* ---------- buscar jugadores para inscribir ---------- */
+let buscaCelTimer=null;
+function filtrarIns(v){
+  const q=normTxt(v),dig=String(v).replace(/\D/g,"");let n=0;
+  const esNum=dig.length>=3&&!/[a-z]/.test(q);
+  document.querySelectorAll("#ins-lista label.check").forEach(l=>{const show=!q||(!esNum&&l.dataset.q.includes(q));l.hidden=!show;if(show)n++});
+  const box=document.getElementById("ins-cel");const nada=document.getElementById("ins-nada");
+  if(nada)nada.hidden=!(q&&!n&&dig.length<3);
+  if(!box)return;box.innerHTML="";clearTimeout(buscaCelTimer);
+  if(dig.length===10&&!/[a-z]/.test(q)){box.innerHTML=`<p class="muted small" style="margin:0">Buscando ese número…</p>`;
+    buscaCelTimer=setTimeout(()=>call("buscarCelular",{celular:dig}).then(j=>{if(document.getElementById("ins-q")?.value.replace(/\D/g,"")!==dig)return;
+      const r=S.retas[S.retaId];const ya=j&&r&&(r.jugadores||[]).includes(j.id);
+      box.innerHTML=j?`<div class="person"><span class="who"><b>${esc(j.alias||j.nombre)}</b>${j.pendiente?` <span class="muted small">sin PIN aún</span>`:""}</span>${ya?`<span class="chip">Ya inscrito</span>`:`<button class="btn sm ball" data-act="insCel" data-id="${esc(j.id)}">Inscribir</button>`}</div>`
+        :`<p class="muted small" style="margin:0">Ese número no está en La Reta. Agrégalo abajo con su alias.</p>`;
+      if(!j){const c=document.getElementById("nj-cel");if(c)c.value=dig;document.getElementById("nj-ali")?.focus()}}).catch(er=>{box.innerHTML=`<p class="muted small" style="margin:0">${esc(er.message)}</p>`}),400)}
+  else if(dig.length>=3&&!/[a-z]/.test(q)){box.innerHTML=`<p class="muted small" style="margin:0">Escribe los 10 dígitos del celular.</p>`}
+}
+
 /* ---------- imagen del podio ---------- */
 function normTxt(t){return String(t||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim()}
 function svgImg(svg){return new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg.includes("xmlns")?svg:svg.replace("<svg",'<svg xmlns="http://www.w3.org/2000/svg"'))})}
@@ -1063,11 +1090,12 @@ function vWelcome(){
 function vRegistro(){
   return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="inicio">← Inicio</button></div><h1>Registro de jugador</h1>
   ${S.afterReg==="club"?`<div class="banner">Primero crea tu cuenta; al terminar registras tu club.</div>`:""}
+  <div class="sug">💡 <b>¿Ya te dieron de alta en una reta?</b> Regístrate con ese mismo número: creas tu PIN y conservas tus retas y puntos.</div>
   <form class="panel stack" data-form="registro" autocomplete="on">
     <div class="grid2"><div class="field"><label class="label" for="r-nom">Nombre</label><input id="r-nom" name="nombre" required autocomplete="given-name"></div>
     <div class="field"><label class="label" for="r-ape">Apellido</label><input id="r-ape" name="apellido" autocomplete="family-name"></div></div>
     <div class="grid2"><div class="field"><label class="label" for="r-ali">Alias</label><input id="r-ali" name="alias" placeholder="Como te dicen en la cancha"></div>
-    <div class="field"><label class="label" for="r-cel">Celular</label><input id="r-cel" name="celular" type="tel" inputmode="numeric" autocomplete="username" placeholder="10 dígitos" required></div></div>
+    <div class="field"><label class="label" for="r-cel">Celular</label><input id="r-cel" name="celular" type="tel" inputmode="numeric" autocomplete="username" placeholder="10 dígitos" required value="${esc(S.preCel||"")}"></div></div>
     <div class="grid2"><div class="field"><label class="label" for="r-pin">PIN de 6 números</label><input id="r-pin" name="pin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" pattern="[0-9]{6}" required></div>
     <div class="field"><label class="label" for="r-pin2">Repite el PIN</label><input id="r-pin2" name="pin2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" pattern="[0-9]{6}" required></div></div>
     <p class="muted small" style="margin:0">Con tu celular y este PIN entras desde cualquier teléfono. No uses fechas de cumpleaños ni números repetidos.</p>
@@ -1112,7 +1140,13 @@ function vCuentas(){
   const l=S.cuentas;
   return`<div class="stack"><div class="row"><button class="btn ghost" data-act="tab" data-v="perfil">← Mi perfil</button></div><h1>Cuentas</h1>
   ${S.pinNuevo?`<div class="presented"><div><span class="label">PIN nuevo de ${esc(pname(S.pinNuevo.id))}</span><div class="elo tel" style="font-size:34px;letter-spacing:.2em">${esc(S.pinNuevo.pin)}</div><div class="muted small">Díselo en persona o por mensaje. Ya no se puede volver a ver.</div></div><button class="btn sm" data-act="pinOk">Listo</button></div>`:""}
-  ${!l?`<div class="panel empty"><strong>Cargando</strong></div>`:`<div class="panel">${l.map(j=>`<div class="sp-row"><div class="who"><div class="alias">${esc(j.alias||j.nombre)}</div><div class="muted small">${esc([j.nombre,j.apellido].filter(Boolean).join(" "))} · <span class="tel">${esc(j.celular)}</span>${j.rol==="ADMIN"?" · Admin":""}${j.estado==="bloqueado"?` · <span style="color:var(--bad)">Bloqueado</span>`:""}</div></div>
+  <form class="panel stack" data-form="agregarCuenta"><h3>Agregar jugador</h3>
+    <div class="grid2"><div class="field"><label class="label" for="ac-ali">Alias</label><input id="ac-ali" name="alias" autocomplete="off"></div>
+    <div class="field"><label class="label" for="ac-cel">Celular</label><input id="ac-cel" name="celular" type="tel" inputmode="numeric" placeholder="10 dígitos" autocomplete="off"></div></div>
+    ${(()=>{const sin=Object.values(S.players).filter(p=>p.demo).sort((a,b)=>pname(a.id).localeCompare(pname(b.id)));return sin.length?`<div class="field"><label class="label" for="ac-jid">¿Ya existe sin celular? (de las fotos)</label><select id="ac-jid" name="jugadorId"><option value="">No, es nuevo</option>${sin.map(p=>`<option value="${esc(p.id)}">${esc(pname(p.id))}${pfull(p.id)?" · "+esc(pfull(p.id)):""}</option>`).join("")}</select></div>`:""})()}
+    <p class="muted small" style="margin:0">Cuando se registre con ese número crea su PIN y conserva su historial. Si ya juega en las retas cargadas de fotos, elígelo para no duplicarlo.</p>
+    <button class="btn primary" type="submit">Guardar</button></form>
+  ${!l?`<div class="panel empty"><strong>Cargando</strong></div>`:`<div class="panel">${l.map(j=>`<div class="sp-row"><div class="who"><div class="alias">${esc(j.alias||j.nombre)}</div><div class="muted small">${esc([j.nombre,j.apellido].filter(Boolean).join(" "))} · <span class="tel">${esc(j.celular)}</span>${j.rol==="ADMIN"?" · Admin":""}${j.pendiente?` · <span style="color:var(--ball)">Sin PIN aún</span>`:""}${j.estado==="bloqueado"?` · <span style="color:var(--bad)">Bloqueado</span>`:""}</div></div>
     <div class="row" style="gap:6px"><select class="sm" data-act="nivelAdm" data-id="${esc(j.id)}" aria-label="Categoría de ${esc(j.alias||j.nombre)}" style="width:auto;padding:6px 8px"><option value="0">Sin nivel</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${nivelDe(j.id)===n?"selected":""}>${NIVELES[n]}</option>`).join("")}</select>${j.rol!=="ADMIN"?`<button class="btn sm" data-act="resetPin" data-id="${esc(j.id)}">PIN nuevo</button><button class="btn sm ${j.estado==="bloqueado"?"":"danger"}" data-act="bloquear" data-id="${esc(j.id)}" data-e="${j.estado==="bloqueado"?"activo":"bloqueado"}">${j.estado==="bloqueado"?"Desbloquear":"Bloquear"}</button>`:""}</div></div>`).join("")||`<p class="muted" style="margin:0">Nadie se ha registrado todavía.</p>`}</div>`}</div>`;
 }
 function vPatros(){
@@ -1287,6 +1321,8 @@ document.addEventListener("click",async e=>{
     try{let c=await podioCanvas(S.retaId,r0);let blob=null;try{blob=await new Promise(res=>c.toBlob(res,"image/png"))}catch(er){}
       if(!blob){for(const k in imgCache)imgCache[k]=null;c=await podioCanvas(S.retaId,r0);blob=await new Promise(res=>c.toBlob(res,"image/png"))}mostrarPodio(blob,"podio-"+normTxt(clubName(r0)).replace(/[^a-z0-9]+/g,"-")+"-"+r0.fecha+".png",r0)}catch(er){console.warn(er);flash("No se pudo armar la imagen.")}return}
   const rid=S.retaId,r=S.retas[rid];if(!r||!S.uid)return;
+  if(a==="insCel"){const id=t.dataset.id;let ins=(r.jugadores||[]).slice();if(ins.includes(id))return flash("Ya está inscrito.");if(ins.length>=r.maxJugadores)return flash("La reta ya está llena.");
+    ins.push(id);if(!S.players[id]){S.version="";await refresh(true)}return setIns(r,ins,"Inscrito")}
   if(a==="faltaUno"){t.disabled=true;try{const x=await call("faltaUno",{retaId:rid});S.retas[rid]=x.reta;S.version="";
       flash(x.avisados?`Listo: avisé a ${x.avisados} jugador${x.avisados>1?"es":""} de tu nivel.`:"No encontré más jugadores a quién avisar.")}catch(er){flash(er.message)}S.keepScroll=true;return render()}
   if(a==="join"||a==="leave"){let ins=(r.jugadores||[]).filter(x=>x!==S.uid);if(a==="join"){if(ins.length>=r.maxJugadores)return flash("La reta ya está llena.");ins.push(S.uid)}
@@ -1327,7 +1363,7 @@ document.addEventListener("change",e=>{
     setTimeout(()=>{const ae=document.activeElement;if(!(ae&&ae.closest&&ae.closest("#main")&&/INPUT|SELECT|TEXTAREA/.test(ae.tagName)))render()},60);
     call("marcador",{retaId:rid,matchId:mid,a:cur.a,b:cur.b}).catch(er=>{flash(er.message);refresh(true)})}
 });
-document.addEventListener("input",e=>{const t=e.target;if(!t.dataset||!t.dataset.f||!S.cd||t.dataset.re)return;let v=t.value;if(t.dataset.t==="num")v=v===""?"":+v;setPath(S.cd,t.dataset.f,v)});
+document.addEventListener("input",e=>{const t=e.target;if(t.dataset&&t.dataset.buscar==="ins"){filtrarIns(t.value);return}if(!t.dataset||!t.dataset.f||!S.cd||t.dataset.re)return;let v=t.value;if(t.dataset.t==="num")v=v===""?"":+v;setPath(S.cd,t.dataset.f,v)});
 document.addEventListener("focusout",()=>setTimeout(()=>{if(S.dirty&&!document.activeElement?.closest?.("#main input,#main select,#main textarea")){S.keepScroll=true;render()}},0));
 
 document.addEventListener("submit",async e=>{
@@ -1335,12 +1371,16 @@ document.addEventListener("submit",async e=>{
   document.activeElement?.blur();
   if(kind==="login"){const cel=g("celular").replace(/\D/g,""),pin=g("pin");
     if(cel.length!==10)return flash("Escribe tu celular a 10 dígitos.");if(!/^\d{6}$/.test(pin))return flash("El PIN es de 6 números.");
-    try{const r=await call("entrar",{celular:cel,pin});setTok(r.token);S.welcomed=true;S.version="";await refresh(true);if(S.volverReta&&S.retas[S.volverReta]){go("reta",{retaId:S.volverReta});S.volverReta=null}else go("retas");activarPush(false);flash("Hola, "+(r.yo.alias||r.yo.nombre))}catch(er){flash(er.message)}return}
+    try{let r;try{r=await call("entrar",{celular:cel,pin})}catch(er){if(/aún no tienes PIN/.test(er.message)){S.preCel=cel;go("registro");flash("Ya te dieron de alta. Crea tu PIN aquí con tu nombre.");return}throw er}setTok(r.token);S.welcomed=true;S.version="";await refresh(true);if(S.volverReta&&S.retas[S.volverReta]){go("reta",{retaId:S.volverReta});S.volverReta=null}else go("retas");activarPush(false);flash("Hola, "+(r.yo.alias||r.yo.nombre))}catch(er){flash(er.message)}return}
   if(kind==="registro"){const cel=g("celular").replace(/\D/g,""),pin=g("pin");
     if(!g("nombre"))return flash("Escribe tu nombre.");if(cel.length!==10)return flash("Escribe tu celular a 10 dígitos.");
     if(!/^\d{6}$/.test(pin))return flash("El PIN debe ser de 6 números.");if(pin!==g("pin2"))return flash("Los dos PIN no coinciden.");
     try{const r=await call("registro",{nombre:g("nombre"),apellido:g("apellido"),alias:g("alias"),celular:cel,pin});setTok(r.token);S.welcomed=true;S.version="";await refresh(true);
-      const next=S.afterReg==="club"?"club":"retas";S.afterReg=null;if(next==="retas"&&S.volverReta&&S.retas[S.volverReta]){go("reta",{retaId:S.volverReta});S.volverReta=null}else go(next);activarPush(false);flash(r.yo.rol==="ADMIN"?"Cuenta creada. Eres el administrador.":"¡Listo! Ya estás registrado.")}catch(er){flash(er.message)}return}
+      const next=S.afterReg==="club"?"club":"retas";S.afterReg=null;if(next==="retas"&&S.volverReta&&S.retas[S.volverReta]){go("reta",{retaId:S.volverReta});S.volverReta=null}else go(next);activarPush(false);S.preCel="";flash(r.reclamado?"¡Listo! Ya tienes tu PIN. Tus retas y puntos se conservaron.":r.yo.rol==="ADMIN"?"Cuenta creada. Eres el administrador.":"¡Listo! Ya estás registrado.")}catch(er){flash(er.message)}return}
+  if(kind==="nuevoJug"){const cel=g("celular").replace(/\D/g,"");if(!g("alias"))return flash("Escribe el alias.");if(cel.length!==10)return flash("Escribe el celular a 10 dígitos.");
+    const r=await act("agregarJugador",{alias:g("alias"),celular:cel,retaId:S.retaId},"Jugador agregado e inscrito");if(r){S.keepScroll=true;render()}return}
+  if(kind==="agregarCuenta"){const cel=g("celular").replace(/\D/g,"");if(cel.length!==10)return flash("Escribe el celular a 10 dígitos.");const jid=g("jugadorId");if(!jid&&!g("alias"))return flash("Escribe el alias.");
+    const r=await act("agregarJugador",{alias:g("alias"),celular:cel,jugadorId:jid},jid?"Celular guardado":"Jugador agregado");if(r){S.cuentas=await call("jugadoresAdmin").catch(()=>S.cuentas);f.reset();render()}return}
   if(kind==="perfil"){if(!g("nombre"))return flash("Escribe tu nombre.");return act("perfil",{nombre:g("nombre"),apellido:g("apellido"),alias:g("alias"),nivel:+fd.get("nivel")||0},"Perfil guardado")}
   if(kind==="pin"){if(!/^\d{6}$/.test(g("nuevo")))return flash("El PIN nuevo debe ser de 6 números.");if(g("nuevo")!==g("nuevo2"))return flash("Los PIN nuevos no coinciden.");
     const r=await act("cambiarPin",{actual:g("actual"),nuevo:g("nuevo")});if(r){S.showPin=false;render();flash("PIN cambiado")}return}

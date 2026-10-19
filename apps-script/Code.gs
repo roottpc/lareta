@@ -50,7 +50,7 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify(r)).setMimeType(ContentService.MimeType.JSON);
 }
 
-var CON_TODO_ = { perfil: 1, club: 1, bloqueo: 1, crearReta: 1, inscritos: 1, partidos: 1, borrarReta: 1, patrocinador: 1, borrarPatrocinador: 1, estadoJugador: 1, nivelJugador: 1, faltaUno: 1 };
+var CON_TODO_ = { perfil: 1, club: 1, bloqueo: 1, crearReta: 1, inscritos: 1, partidos: 1, borrarReta: 1, patrocinador: 1, borrarPatrocinador: 1, estadoJugador: 1, nivelJugador: 1, faltaUno: 1, agregarJugador: 1 };
 
 /** Punto único de entrada desde la app. */
 function api(token, accion, datos) {
@@ -91,7 +91,9 @@ function api(token, accion, datos) {
       resetPin: function () { return resetPin_(yo, datos); },
       estadoJugador: function () { return estadoJugador_(yo, datos); },
       nivelJugador: function () { return nivelJugador_(yo, datos); },
-      faltaUno: function () { return faltaUno_(yo, datos); }
+      faltaUno: function () { return faltaUno_(yo, datos); },
+      agregarJugador: function () { return agregarJugador_(yo, datos); },
+      buscarCelular: function () { return buscarCelular_(yo, datos); }
     };
     if (!acciones[accion]) throw new Error('Acción no válida.');
     var res = ok_(acciones[accion]());
@@ -250,8 +252,18 @@ function registro_(d) {
     var nombre = texto_(d.nombre, 40);
     if (!nombre) falla_('Escribe tu nombre.');
     var t = tabla_('JUGADORES');
-    for (var i = 0; i < t.length; i++) if (t[i].celular === cel) falla_('Ese celular ya está registrado. Entra con tu PIN.');
-    var hayCuentas = t.some(function (x) { return x.celular; });
+    for (var i = 0; i < t.length; i++) if (t[i].celular === cel) {
+      if (t[i].hash) falla_('Ese celular ya está registrado. Entra con tu PIN.');
+      // Lo registró alguien más: la persona reclama su cuenta, crea su PIN y conserva su historial.
+      var p = t[i];
+      p.nombre = nombre; p.apellido = texto_(d.apellido, 40) || p.apellido; p.alias = texto_(d.alias, 24) || p.alias;
+      p.salt = Utilities.getUuid(); p.hash = hashPin_(p.salt, pin); p.estado = p.estado === 'bloqueado' ? 'bloqueado' : 'activo'; p.actualizado = ahora_();
+      if (p.estado === 'bloqueado') falla_('Esta cuenta está bloqueada. Habla con el administrador.');
+      guardar_('JUGADORES', p);
+      CacheService.getScriptCache().remove('fallos_' + cel);
+      return { token: crearSesion_(p.id), yo: publicoJugador_(p, p), reclamado: true };
+    }
+    var hayCuentas = t.some(function (x) { return x.hash; });
     var salt = Utilities.getUuid();
     var j = guardar_('JUGADORES', {
       id: nuevoId_('u'), celular: cel, nombre: nombre, apellido: texto_(d.apellido, 40), alias: texto_(d.alias, 24),
@@ -268,6 +280,7 @@ function entrar_(d) {
   if (fallos >= MAX_FALLOS) falla_('Demasiados intentos. Espera 15 minutos o pide al administrador que te cambie el PIN.');
   var j = null, t = tabla_('JUGADORES');
   for (var i = 0; i < t.length; i++) if (t[i].celular && t[i].celular === cel) j = t[i];
+  if (j && !j.hash) falla_('Ya te dieron de alta en La Reta, pero aún no tienes PIN. Toca "Registrarme" con este mismo número para crear tu PIN; tus retas y puntos se conservan.');
   if (!j || !/^\d{6}$/.test(pin) || hashPin_(j.salt, pin) !== j.hash) {
     cache.put(llave, String(fallos + 1), BLOQUEO_SEG);
     falla_('Celular o PIN incorrectos.' + (fallos + 1 >= 3 ? ' Te quedan ' + Math.max(0, MAX_FALLOS - fallos - 1) + ' intentos.' : ''));
@@ -323,7 +336,7 @@ function soloAdmin_(yo) { if (!esAdmin_(yo)) falla_('Solo el administrador puede
 /* ===================== Lectura ===================== */
 
 function publicoJugador_(j, yo) {
-  var o = { id: j.id, nombre: j.nombre, apellido: j.apellido, alias: j.alias, nivel: Number(j.nivel) || 0, demo: !j.celular };
+  var o = { id: j.id, nombre: j.nombre, apellido: j.apellido, alias: j.alias, nivel: Number(j.nivel) || 0, demo: !j.celular, pendiente: !!(j.celular && !j.hash) };
   if (yo && (yo.id === j.id || esAdmin_(yo))) { o.celular = j.celular; o.rol = j.rol; o.estado = j.estado; }
   return o;
 }
@@ -558,7 +571,7 @@ function faltaUno_(yo, d) {
         af[id] = (af[id] || 0) + (cerca ? 2 : 0) + (mismo ? 1 : 0) + 0.5;
       });
     });
-    var cand = jug.filter(function (j) { return j.celular && j.estado !== 'bloqueado' && j.id !== yo.id && ins.indexOf(j.id) < 0; })
+    var cand = jug.filter(function (j) { return j.celular && j.hash && j.estado !== 'bloqueado' && j.id !== yo.id && ins.indexOf(j.id) < 0; })
       .map(function (j) {
         var n = nivelDe[j.id], dist = 0;
         if (lo && n) dist = n < lo ? lo - n : (n > hi ? n - hi : 0);
@@ -603,7 +616,7 @@ function retaCorta_(r) {
   }
   return txt;
 }
-function tieneCuenta_(id) { var j = buscar_('JUGADORES', id); return !!(j && j.celular); }
+function tieneCuenta_(id) { var j = buscar_('JUGADORES', id); return !!(j && j.celular && j.hash); }
 function avisar_(paraId, tipo, texto, retaId, deId) {
   if (!paraId || paraId === deId || !tieneCuenta_(paraId)) return;
   guardar_('AVISOS', { id: nuevoId_('a'), paraId: paraId, tipo: tipo, texto: texto, retaId: retaId || '', deId: deId || '', creado: ahora_(), leido: '' });
@@ -620,7 +633,7 @@ function canchasTxt_(r) { return r.canchas + ' cancha' + (r.canchas > 1 ? 's' : 
 function avisarNuevaReta_(yo, r) {
   var club = clubDeReta_(r), dueno = club && club.ownerId !== yo.id ? club.ownerId : '';
   if (dueno) avisar_(dueno, 'club', 'Nueva reta en tu club: ' + retaCorta_(r) + ' · ' + canchasTxt_(r) + ' · ' + nombreCorto_(yo.id) + ' organiza', r.id, yo.id);
-  var para = tabla_('JUGADORES').filter(function (j) { return j.celular && j.estado !== 'bloqueado' && j.id !== yo.id && j.id !== dueno; }).map(function (j) { return j.id; });
+  var para = tabla_('JUGADORES').filter(function (j) { return j.celular && j.hash && j.estado !== 'bloqueado' && j.id !== yo.id && j.id !== dueno; }).map(function (j) { return j.id; });
   if (!para.length) return;
   var texto = 'Nueva reta: ' + retaCorta_(r) + ' · ' + (r.tipo === 'fija' ? 'Pareja fija' : 'Royal') + (r.nivel ? ' · Nivel ' + rangoTxt_(r.nivel) : '') + ' · ' + r.maxJugadores + ' lugares. ¡Apúntate!';
   var h = hoja_('AVISOS'), cols = HOJAS.AVISOS, ahora = ahora_();
@@ -799,12 +812,69 @@ function imagenPatro_(d) {
   return r;
 }
 
+/* ===================== Jugadores dados de alta por otros ===================== */
+
+function buscarCelular_(yo, d) {
+  var cel = limpiarCel_(d.celular);
+  if (cel.length !== 10) falla_('Escribe el celular a 10 dígitos.');
+  var t = tabla_('JUGADORES');
+  for (var i = 0; i < t.length; i++) if (t[i].celular === cel && t[i].estado !== 'bloqueado') return { id: t[i].id, alias: t[i].alias, nombre: t[i].nombre, pendiente: !t[i].hash };
+  return null;
+}
+
+/**
+ * Da de alta a un jugador con su alias y celular (sin PIN). Cuando esa persona se registre con su número,
+ * crea su PIN y conserva su historial. Si viene retaId, además lo inscribe en la reta.
+ * Con jugadorId (solo admin) le pone celular a un jugador que ya existe sin número (por ejemplo, de las fotos).
+ */
+function agregarJugador_(yo, d) {
+  return conCandado_(function () {
+    var cel = limpiarCel_(d.celular), alias = texto_(d.alias, 24);
+    if (cel.length !== 10) falla_('Escribe el celular a 10 dígitos.');
+    var r = null;
+    if (d.retaId) {
+      r = reta_(d.retaId);
+      if (!(esAdmin_(yo) || r.creadorId === yo.id)) falla_('Solo quien creó la reta puede inscribir a otros.');
+      if ((r.partidos || []).length) falla_('Los partidos ya se sortearon.');
+    }
+    var t = tabla_('JUGADORES'), j = null;
+    for (var i = 0; i < t.length; i++) if (t[i].celular === cel) j = t[i];
+    if (d.jugadorId) {
+      soloAdmin_(yo);
+      var x = buscar_('JUGADORES', d.jugadorId);
+      if (!x) falla_('No encontré a ese jugador.');
+      if (x.celular) falla_('Ese jugador ya tiene celular.');
+      if (j) falla_('Ese celular ya es de ' + (j.alias || j.nombre) + '.');
+      x.celular = cel; if (alias) x.alias = alias; x.actualizado = ahora_();
+      guardar_('JUGADORES', x);
+      j = x;
+    } else if (!j) {
+      if (!alias) falla_('Escribe el alias del jugador.');
+      j = guardar_('JUGADORES', {
+        id: nuevoId_('u'), celular: cel, nombre: texto_(d.nombre, 40) || alias, apellido: '', alias: alias,
+        salt: '', hash: '', rol: 'JUGADOR', estado: 'activo', creado: ahora_(), actualizado: ahora_(), nivel: nivelValido_(d.nivel)
+      });
+    }
+    if (j.estado === 'bloqueado') falla_('Ese jugador está bloqueado.');
+    if (r) {
+      var antes = (r.jugadores || []).slice();
+      if (antes.indexOf(j.id) < 0) {
+        if (antes.length >= Number(r.maxJugadores)) falla_('La reta ya está llena.');
+        r.jugadores = antes.concat([j.id]);
+        guardar_('RETAS', r);
+        avisarInscritos_(yo, r, antes, r.jugadores);
+      }
+    }
+    return { jugador: publicoJugador_(j, yo), reta: r ? limpio_(r) : null };
+  });
+}
+
 /* ===================== Jugadores (admin) ===================== */
 
 function jugadoresAdmin_(yo) {
   soloAdmin_(yo);
   return tabla_('JUGADORES').filter(function (j) { return j.celular; }).map(function (j) {
-    return { id: j.id, nombre: j.nombre, apellido: j.apellido, alias: j.alias, celular: j.celular, rol: j.rol, estado: j.estado, creado: j.creado };
+    return { id: j.id, nombre: j.nombre, apellido: j.apellido, alias: j.alias, celular: j.celular, rol: j.rol, estado: j.estado, creado: j.creado, pendiente: !j.hash };
   });
 }
 

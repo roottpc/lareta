@@ -16,15 +16,16 @@ var HOJAS = {
   SESIONES: ['token', 'jugadorId', 'creado', 'ultimo'],
   CLUBS: ['id', 'ownerId', 'nombre', 'ciudad', 'direccion', 'canchas', 'telefono', 'horario', 'creado', 'actualizado', 'apertura', 'cierre', 'turno', 'fotos', 'descripcion', 'precios', 'promos', 'canchasInfo', 'extras'],
   BLOQUEOS: ['id', 'clubId', 'fecha', 'cancha', 'hora', 'nota', 'porId', 'creado'],
-  RETAS: ['id', 'creadorId', 'fecha', 'hora', 'club', 'canchas', 'maxJugadores', 'tipo', 'puntos', 'modo', 'reglas', 'castigo', 'jugadores', 'partidos', 'creado', 'nivel', 'buscando'],
+  RETAS: ['id', 'creadorId', 'fecha', 'hora', 'club', 'canchas', 'maxJugadores', 'tipo', 'puntos', 'modo', 'reglas', 'castigo', 'jugadores', 'partidos', 'creado', 'nivel', 'buscando', 'formatoId', 'fotos'],
+  FORMATOS: ['id', 'club', 'nombre', 'nJugadores', 'canchas', 'rondas', 'fotoId', 'creadorId', 'creado'],
   MARCADORES: ['id', 'retaId', 'matchId', 'a', 'b', 'porId', 'actualizado'],
   MULTAS: ['id', 'retaId', 'jugadorId', 'n'],
   SUSCRIPCIONES: ['id', 'jugadorId', 'endpoint', 'creado', 'ultimo'],
   AVISOS: ['id', 'paraId', 'tipo', 'texto', 'retaId', 'deId', 'creado', 'leido'],
   PATROCINADORES: ['id', 'nombre', 'giro', 'paquete', 'cancha', 'cuota', 'forma', 'color', 'tinta', 'siglas', 'contacto', 'premio', 'lema', 'imagenId', 'activo', 'actualizado']
 };
-var JSON_COLS = { reglas: 1, jugadores: 1, partidos: 1, fotos: 1, precios: 1, promos: 1, canchasInfo: 1 };
-var NUM_COLS = { canchas: 1, maxJugadores: 1, puntos: 1, a: 1, b: 1, n: 1, cancha: 1, cuota: 1, turno: 1 };
+var JSON_COLS = { rondas: 1, reglas: 1, jugadores: 1, partidos: 1, fotos: 1, precios: 1, promos: 1, canchasInfo: 1 };
+var NUM_COLS = { nJugadores: 1, canchas: 1, maxJugadores: 1, puntos: 1, a: 1, b: 1, n: 1, cancha: 1, cuota: 1, turno: 1 };
 var SESION_DIAS = 120;
 var MAX_FALLOS = 5;
 var BLOQUEO_SEG = 900;
@@ -50,7 +51,7 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify(r)).setMimeType(ContentService.MimeType.JSON);
 }
 
-var CON_TODO_ = { perfil: 1, club: 1, bloqueo: 1, crearReta: 1, inscritos: 1, partidos: 1, borrarReta: 1, patrocinador: 1, borrarPatrocinador: 1, estadoJugador: 1, nivelJugador: 1, faltaUno: 1, agregarJugador: 1 };
+var CON_TODO_ = { perfil: 1, club: 1, bloqueo: 1, crearReta: 1, inscritos: 1, partidos: 1, borrarReta: 1, patrocinador: 1, borrarPatrocinador: 1, estadoJugador: 1, nivelJugador: 1, faltaUno: 1, agregarJugador: 1, guardarFormato: 1, borrarFormato: 1, guardarJugada: 1, marcadores: 1 };
 
 /** Punto único de entrada desde la app. */
 function api(token, accion, datos) {
@@ -93,7 +94,13 @@ function api(token, accion, datos) {
       nivelJugador: function () { return nivelJugador_(yo, datos); },
       faltaUno: function () { return faltaUno_(yo, datos); },
       agregarJugador: function () { return agregarJugador_(yo, datos); },
-      buscarCelular: function () { return buscarCelular_(yo, datos); }
+      buscarCelular: function () { return buscarCelular_(yo, datos); },
+      leerFoto: function () { return leerFoto_(yo, datos); },
+      guardarFormato: function () { return guardarFormato_(yo, datos); },
+      borrarFormato: function () { return borrarFormato_(yo, datos); },
+      guardarJugada: function () { return guardarJugada_(yo, datos); },
+      marcadores: function () { return marcadores_(yo, datos); },
+      llaveGemini: function () { return llaveGemini_(yo, datos); }
     };
     if (!acciones[accion]) throw new Error('Acción no válida.');
     var res = ok_(acciones[accion]());
@@ -361,7 +368,9 @@ function todo_(yo, versionCliente) {
       if (!admin) { delete o.cuota; if (!p.activo) return null; }
       return o;
     }).filter(Boolean),
-    avisos: yo ? misAvisos_(yo) : []
+    avisos: yo ? misAvisos_(yo) : [],
+    formatos: tabla_('FORMATOS').map(limpio_),
+    fotosOk: !!PropertiesService.getScriptProperties().getProperty('GEMINI_KEY')
   };
   return r;
 }
@@ -810,6 +819,205 @@ function imagenPatro_(d) {
   var txt = JSON.stringify(r);
   if (txt.length < 95000) c.put(k, txt, 21600);
   return r;
+}
+
+/* ===================== Fotos: lectura con Gemini ===================== */
+
+var MODELOS_GEMINI_ = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
+
+function llaveGemini_(yo, d) {
+  soloAdmin_(yo);
+  var k = String(d.llave || '').trim();
+  var p = PropertiesService.getScriptProperties();
+  if (!k) { p.deleteProperty('GEMINI_KEY'); tocar_(); return { configurada: false }; }
+  if (!/^[A-Za-z0-9_\-]{20,80}$/.test(k)) falla_('Esa llave no parece válida. Cópiala completa desde Google AI Studio.');
+  p.setProperty('GEMINI_KEY', k); p.deleteProperty('GEMINI_MODELO');
+  tocar_();
+  return { configurada: true };
+}
+
+/** Manda la imagen y el texto a Gemini y regresa el JSON que contesta. Prueba varios modelos por si alguno ya no existe. */
+function gemini_(prompt, b64, mime) {
+  var p = PropertiesService.getScriptProperties(), key = p.getProperty('GEMINI_KEY');
+  if (!key) falla_('Falta activar la lectura de fotos. El administrador debe poner la llave de Gemini en Mi perfil.');
+  var bueno = p.getProperty('GEMINI_MODELO');
+  var lista = (bueno ? [bueno] : []).concat(MODELOS_GEMINI_.filter(function (m) { return m !== bueno; }));
+  var ultimo = '';
+  for (var i = 0; i < lista.length; i++) {
+    var resp = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + lista[i] + ':generateContent', {
+      method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key },
+      payload: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ inline_data: { mime_type: mime, data: b64 } }, { text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0 }
+      })
+    });
+    var code = resp.getResponseCode(), txt = resp.getContentText();
+    if (code === 200) {
+      var j = JSON.parse(txt), c = j.candidates && j.candidates[0];
+      var out = c && c.content && c.content.parts ? c.content.parts.map(function (x) { return x.text || ''; }).join('') : '';
+      if (!out) { ultimo = 'Gemini no regresó texto.'; continue; }
+      if (bueno !== lista[i]) p.setProperty('GEMINI_MODELO', lista[i]);
+      return jsonSuelto_(out);
+    }
+    if (code === 429) falla_('Se acabaron las lecturas gratis por ahora. Intenta en un rato o mañana.');
+    if (code === 400 && /API key|API_KEY/i.test(txt)) falla_('La llave de Gemini no es válida. Revísala en Mi perfil.');
+    if (code === 403) falla_('Google rechazó la llave de Gemini (403). Revisa que la API esté activa en AI Studio.');
+    ultimo = 'Error ' + code;
+  }
+  falla_('No se pudo leer la foto (' + ultimo + '). Intenta de nuevo.');
+}
+function jsonSuelto_(t) {
+  t = String(t).replace(/```json|```/g, '');
+  var a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b < a) falla_('No entendí la foto. Intenta con una foto más clara.');
+  try { return JSON.parse(t.slice(a, b + 1)); } catch (e) { falla_('No entendí la foto. Intenta con una foto más clara.'); }
+}
+
+var PROMPTS_FOTO_ = {
+  formato: 'La foto muestra el formato de un "royal" de pádel de un club: una tabla o lista donde los jugadores se identifican con NÚMEROS (posiciones 1, 2, 3...). ' +
+    'En cada ronda hay partidos de dos parejas contra dos parejas, posiblemente en varias canchas. Extrae TODAS las rondas y partidos exactamente como aparecen. ' +
+    'Si no se indica la cancha, numéralas en el orden en que aparecen dentro de la ronda. No inventes partidos. ' +
+    'Responde SOLO JSON con esta forma: {"jugadores": <total de posiciones>, "canchas": <número de canchas>, "rondas": [{"ronda": 1, "partidos": [{"cancha": 1, "a": [1, 2], "b": [3, 4]}]}]}',
+  orden: 'La foto muestra el orden de partidos de una reta de pádel (quién juega con quién y contra quién en cada ronda), normalmente con NOMBRES o apodos. ' +
+    'Extrae todas las rondas y partidos. Si no se indica la cancha, numéralas en el orden en que aparecen dentro de la ronda. Copia los nombres tal como están escritos. ' +
+    'Si ves club, fecha u hora, inclúyelos. Responde SOLO JSON: {"club": "", "fecha": "AAAA-MM-DD o vacío", "hora": "HH:MM o vacío", ' +
+    '"jugadores": ["todos los nombres"], "rondas": [{"ronda": 1, "partidos": [{"cancha": 1, "a": ["Nombre", "Nombre"], "b": ["Nombre", "Nombre"]}]}]}',
+  resultado: 'La foto muestra los RESULTADOS de una reta de pádel. Normalmente es una tabla con una fila por jugador: número o posición (si aparece), nombre o apodo, los puntos de cada ronda o partido en columnas, y a veces el total. ' +
+    'Copia los nombres tal como están escritos y los números exactos. Si una casilla está vacía o tachada pon null. Respeta el orden de las columnas de izquierda a derecha. ' +
+    'Si en lugar de una tabla por jugador la foto muestra marcadores por partido (pareja contra pareja), llénalos en "partidos". ' +
+    'Responde SOLO JSON: {"jugadores": [{"pos": <número o null>, "nombre": "", "puntos": [<números o null por columna>], "total": <número o null>}], ' +
+    '"partidos": [{"ronda": 1, "cancha": 1, "a": ["Nombre", "Nombre"], "b": ["Nombre", "Nombre"], "pa": <puntos pareja a>, "pb": <puntos pareja b>}]}'
+};
+
+function leerFoto_(yo, d) {
+  var tipo = String(d.tipo || '');
+  if (!PROMPTS_FOTO_[tipo]) falla_('Tipo de foto no válido.');
+  var mime = /^image\/(jpeg|png|webp)$/.test(d.mime || '') ? d.mime : 'image/jpeg';
+  var b64 = String(d.base64 || '');
+  if (!b64 || b64.length > 4000000) falla_('La foto está vacía o pesa demasiado.');
+  var prompt = PROMPTS_FOTO_[tipo];
+  var pistas = (d.nombres || []).slice(0, 40).map(function (x) { return texto_(x, 30); }).filter(Boolean);
+  if (pistas.length) prompt += ' Pista: los jugadores probablemente son: ' + pistas.join(', ') + '. Úsalos para descifrar letra difícil, pero copia lo que realmente diga la foto.';
+  if (d.contexto) prompt += ' Contexto: ' + texto_(d.contexto, 300);
+  var datos = gemini_(prompt, b64, mime);
+  var fotoId = '';
+  try {
+    var blob = Utilities.newBlob(Utilities.base64Decode(b64), mime, 'foto_' + tipo + '_' + Date.now() + '.jpg');
+    var f = carpetaImagenes_().createFile(blob);
+    fotoId = f.getId();
+  } catch (e) { console.warn('foto', e); }
+  return { datos: datos, fotoId: fotoId };
+}
+
+/* ===================== Formatos de royal por club ===================== */
+
+function limpiarRondas_(rondas, maxPos) {
+  return (rondas || []).slice(0, 40).map(function (rd, i) {
+    return {
+      ronda: Number(rd.ronda) || i + 1,
+      partidos: (rd.partidos || []).slice(0, 20).map(function (m, k) {
+        var f = function (v) { return Math.max(1, Math.min(maxPos, Math.round(Number(v)) || 1)); };
+        var a = (m.a || []).slice(0, 2).map(f), b = (m.b || []).slice(0, 2).map(f);
+        if (a.length !== 2 || b.length !== 2) falla_('Hay un partido incompleto en la ronda ' + (i + 1) + '.');
+        return { cancha: Number(m.cancha) || k + 1, a: a, b: b };
+      })
+    };
+  }).filter(function (rd) { return rd.partidos.length; });
+}
+function guardarFormato_(yo, d) {
+  return conCandado_(function () {
+    var club = texto_(d.club, 60);
+    if (!club) falla_('Escribe el club.');
+    var n = Math.max(4, Math.min(40, Number(d.nJugadores) || 0));
+    var rondas = limpiarRondas_(d.rondas, n);
+    if (!rondas.length) falla_('El formato no tiene partidos.');
+    var prev = d.id ? buscar_('FORMATOS', d.id) : null;
+    if (prev && prev.creadorId !== yo.id && !esAdmin_(yo)) falla_('Solo quien lo subió puede cambiarlo.');
+    var canchas = 0; rondas.forEach(function (r) { canchas = Math.max(canchas, r.partidos.length); });
+    var f = prev || { id: nuevoId_('f'), creadorId: yo.id, creado: ahora_() };
+    f.club = club; f.nombre = texto_(d.nombre, 60) || ('Royal ' + n + ' jugadores'); f.nJugadores = n; f.canchas = canchas;
+    f.rondas = rondas; f.fotoId = texto_(d.fotoId, 80) || f.fotoId || '';
+    guardar_('FORMATOS', f);
+    return limpio_(f);
+  });
+}
+function borrarFormato_(yo, d) {
+  return conCandado_(function () {
+    var f = buscar_('FORMATOS', d.id);
+    if (!f) falla_('Ese formato ya no existe.');
+    if (f.creadorId !== yo.id && !esAdmin_(yo)) falla_('Solo quien lo subió puede borrarlo.');
+    borrar_('FORMATOS', f.id);
+    return true;
+  });
+}
+
+/* ===================== Guardar una jugada completa (desde fotos) ===================== */
+
+function numMarc_(v) { return v === null || v === '' || v === undefined ? null : Math.max(0, Math.min(99, Math.round(Number(v)) || 0)); }
+
+function guardarJugada_(yo, d) {
+  return conCandado_(function () {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.fecha))) falla_('Elige la fecha.');
+    var club = texto_(d.club, 60);
+    if (!club) falla_('Escribe el club.');
+    var validos = {}; tabla_('JUGADORES').forEach(function (j) { validos[j.id] = 1; });
+    var ids = []; (d.jugadores || []).forEach(function (x) { if (validos[x] && ids.indexOf(x) < 0) ids.push(x); });
+    if (ids.length < 2) falla_('Faltan jugadores.');
+    var hora = /^\d{2}:\d{2}$/.test(String(d.hora)) ? d.hora : '';
+    var fotos = (d.fotos || []).map(function (x) { return texto_(x, 80); }).filter(Boolean).slice(0, 4);
+    var r = {
+      id: nuevoId_('r'), creadorId: yo.id, fecha: d.fecha, hora: hora, club: club,
+      canchas: Math.max(1, Math.min(12, Number(d.canchas) || 1)), maxJugadores: ids.length,
+      tipo: d.historica ? 'historica' : (d.tipo === 'fija' ? 'fija' : 'royal'),
+      puntos: Math.max(1, Math.min(99, Number(d.puntos) || 24)), modo: d.historica ? 'puntos' : (d.modo === 'meta' ? 'meta' : 'total'),
+      reglas: [], castigo: 'Castigos', jugadores: ids, partidos: [], creado: ahora_(), nivel: '', buscando: '',
+      formatoId: texto_(d.formatoId, 40), fotos: fotos
+    };
+    if (d.historica) {
+      r.partidos = (d.filas || []).filter(function (f) { return validos[f.jugadorId]; }).map(function (f) {
+        var sets = (f.sets || []).slice(0, 20).map(numMarc_);
+        var total = f.total != null && f.total !== '' ? numMarc_(f.total) : sets.reduce(function (a, b) { return a + (b || 0); }, 0);
+        return { jugadorId: f.jugadorId, sets: sets, total: total };
+      });
+      guardar_('RETAS', r);
+      return { reta: limpio_(r) };
+    }
+    var dentro = {}; ids.forEach(function (x) { dentro[x] = 1; });
+    r.partidos = (d.partidos || []).slice(0, 400).map(function (m, i) {
+      var a = (m.a || []).slice(0, 2), b = (m.b || []).slice(0, 2);
+      if (a.length !== 2 || b.length !== 2) falla_('Hay un partido incompleto.');
+      a.concat(b).forEach(function (x) { if (!dentro[x]) falla_('Un jugador del orden no está en la lista.'); });
+      return { id: texto_(m.id, 12) || ('r' + (Number(m.ronda) || 1) + 'c' + (Number(m.cancha) || 1) + '_' + i), ronda: Number(m.ronda) || 1, cancha: Number(m.cancha) || 1, a: a, b: b };
+    });
+    guardar_('RETAS', r);
+    var n = 0;
+    (d.partidos || []).forEach(function (m, i) {
+      var pa = numMarc_(m.pa), pb = numMarc_(m.pb);
+      if (pa === null && pb === null) return;
+      var mid = r.partidos[i].id;
+      guardar_('MARCADORES', { id: r.id + '__' + mid, retaId: r.id, matchId: mid, a: pa, b: pb, porId: yo.id, actualizado: ahora_() });
+      n++;
+    });
+    return { reta: limpio_(r), marcadores: n };
+  });
+}
+
+/** Guarda varios marcadores de una reta de una vez (por ejemplo, leídos de la foto del resultado). */
+function marcadores_(yo, d) {
+  return conCandado_(function () {
+    var r = reta_(d.retaId);
+    if (!puedeOrganizar_(yo, r)) falla_('Solo quien organiza o juega la reta puede capturar marcadores.');
+    var ids = {}; (r.partidos || []).forEach(function (m) { ids[m.id] = 1; });
+    var n = 0;
+    (d.lista || []).slice(0, 400).forEach(function (x) {
+      if (!ids[x.matchId]) return;
+      guardar_('MARCADORES', { id: r.id + '__' + x.matchId, retaId: r.id, matchId: x.matchId, a: numMarc_(x.a), b: numMarc_(x.b), porId: yo.id, actualizado: ahora_() });
+      n++;
+    });
+    var f = texto_(d.fotoId, 80);
+    if (f) { r.fotos = (r.fotos || []).concat([f]).slice(-4); guardar_('RETAS', r); }
+    return { guardados: n };
+  });
 }
 
 /* ===================== Jugadores dados de alta por otros ===================== */

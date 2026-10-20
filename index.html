@@ -219,6 +219,18 @@ nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:re
 .falta-box{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border-radius:14px;border:1px solid #ff5a1f;background:linear-gradient(120deg,rgba(255,90,31,.16),rgba(255,90,31,.04))}
 .falta-box .btn{flex:none}
 .sug{padding:10px 12px;border-radius:10px;background:var(--soft);font-size:13px}
+.fmt-row{display:grid;grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) 22px minmax(0,1fr) minmax(0,1fr) 34px;gap:6px;align-items:center}
+.fmt-row input{text-align:center;padding:8px 2px;min-width:0;width:100%}
+.fmt-row b{text-align:center;font-size:12px}
+.map-row{display:grid;grid-template-columns:minmax(80px,1fr) 2fr;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.map-row:first-child{border-top:0}
+.pts-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pts-row input{width:52px;text-align:center;padding:8px 4px}
+.res-m{display:grid;grid-template-columns:52px 1fr auto 1fr;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
+.res-m:first-child{border-top:0}.res-m>span:last-of-type{text-align:right}
+.res-m.warn{background:rgba(255,80,80,.06)}
+.res-m .small{grid-column:1/-1}
+.pos-list{display:flex;flex-wrap:wrap;gap:6px}
 .pod-ov{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.86);display:grid;place-items:center;padding:16px;overflow:auto}
 .pod-box{display:flex;flex-direction:column;gap:12px;max-width:420px;width:100%}
 .pod-box a.btn{text-decoration:none}
@@ -328,8 +340,8 @@ img{max-width:100%}
 </div></header>
 <main class="wrap" id="main"><div class="empty"><strong>Cargando</strong>Conectando con las retas…</div></main>
 <nav class="tabs" aria-label="Secciones"><div class="spons" id="spons" aria-label="Patrocinadores"></div><div class="in">
-  <button data-act="tab" data-v="retas">Retas</button>
-  <button data-act="tab" data-v="clubs">Clubs</button>
+  <button data-act="tab" data-v="retas">Jugadas</button>
+  <button data-act="tab" data-v="fotos">Fotos</button>
   <button data-act="tab" data-v="ranking">Ranking</button>
 </div></nav>
 
@@ -346,7 +358,8 @@ const pfull=id=>{const p=S.players[id];if(!p)return"";const f=[p.nombre,p.apelli
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const NIVELES=["","1ra","2da","3ra","4ta","5ta","6ta","Principiante"];
 const nivelDe=id=>+(S.players[id]||{}).nivel||0;
-const nvTag=id=>{const n=nivelDe(id);return n?`<span class="nv">${NIVELES[n]}</span>`:""};
+const OCULTAR_NIVELES=true;
+const nvTag=id=>{const n=nivelDe(id);return n&&!OCULTAR_NIVELES?`<span class="nv">${NIVELES[n]}</span>`:""};
 const rangoTxt=t=>{const m=String(t||"").split("-");if(m.length!==2)return"";return m[0]===m[1]?NIVELES[+m[0]]:NIVELES[+m[0]]+" a "+NIVELES[+m[1]]};
 const RANGOS=[["","Abierta: todos los niveles"],...[1,2,3,4,5,6,7].map(n=>[n+"-"+n,"Solo "+NIVELES[n]]),...[1,2,3,4,5,6].map(n=>[n+"-"+(n+1),NIVELES[n]+" y "+NIVELES[n+1]])];
 const buscandoAhora=r=>r.buscando&&Date.now()-new Date(r.buscando).getTime()<3*3600e3&&!(r.partidos||[]).length&&(r.jugadores||[]).length<r.maxJugadores;
@@ -488,19 +501,18 @@ function render(){
   if(S.status==="loading"||!S.loadedPlayers)return;
   if((S.view==="perfil"||S.view==="cuentas"||S.view==="patros"||S.view==="nueva")&&!S.uid)S.view="inicio";
   if(S.view==="registro"&&S.uid)S.view="retas";
-  if(S.view==="retas"&&!S.uid&&!S.welcomed)S.view="inicio";
-  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===(S.view==="reta"||S.view==="nueva"?"retas":S.view==="clubPub"?"clubs":S.view)));
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===(S.view==="reta"||S.view==="nueva"?"retas":S.view)));
   const me=S.uid&&S.players[S.uid];const wb=document.getElementById("who");if(wb){wb.textContent=me?(me.alias||me.nombre):"Entrar";wb.dataset.v=me?"perfil":"inicio"}
   document.body.classList.toggle("welcome",S.view==="inicio"||S.view==="registro");
   const nb=(S.avisos||[]).filter(a=>!a.leido).length;const bl=document.getElementById("bell");
-  if(bl){bl.hidden=!S.uid;bl.classList.toggle("on",nb>0);const bn=document.getElementById("bellN");bn.hidden=!nb;bn.textContent=nb>9?"9+":nb}
+  if(bl){bl.hidden=true;bl.classList.toggle("on",nb>0);const bn=document.getElementById("bellN");bn.hidden=!nb;bn.textContent=nb>9?"9+":nb}
   try{if(navigator.setAppBadge){nb?navigator.setAppBadge(nb):navigator.clearAppBadge()}}catch(e){}
   if(S.view==="avisos"&&!S.uid)S.view="inicio";
-  const v={clubs:vClubs,clubPub:vClubPub,avisos:vAvisos,inicio:vWelcome,registro:vRegistro,club:vClub,retas:vRetas,nueva:vNueva,reta:vReta,perfil:vPerfil,ranking:vRanking,patros:vPatros,cuentas:vCuentas}[S.view]||vRetas;
+  const v={clubs:vClubs,clubPub:vClubPub,avisos:vAvisos,inicio:vWelcome,registro:vRegistro,club:vClub,retas:vRetas,nueva:vNueva,reta:vReta,perfil:vPerfil,ranking:vRanking,patros:vPatros,cuentas:vCuentas,fotos:vFotos}[S.view]||vRetas;
   const y=window.scrollY;main.innerHTML=v();
   if(S.keepScroll)window.scrollTo(0,y);S.keepScroll=false;
 }
-function go(view,extra={}){Object.assign(S,{view,confirm:null,showInscribir:false},extra);S.keepScroll=false;render();window.scrollTo(0,0)}
+function go(view,extra={}){Object.assign(S,{view,confirm:null},{showInscribir:false},extra);S.keepScroll=false;render();window.scrollTo(0,0)}
 
 function retaCard([id,r]){
   const st=retaState(id,r);const n=(r.jugadores||[]).length;
@@ -508,10 +520,10 @@ function retaCard([id,r]){
     <div class="row between"><span class="when">${esc(fmtDate(r.fecha))}</span><span class="chip done">Histórica</span></div>
     <div class="row between" style="margin-top:4px"><span style="font-weight:600">${esc(clubName(r))}</span><span class="muted small">Royal · ${n} jugadores · puntos</span></div></button>`;
   return`<button class="card" data-act="open" data-id="${esc(id)}">
-    <div class="row between"><span class="when">${esc(fmtDate(r.fecha))} · ${esc(fmtHora(r.hora))}</span><span class="chip ${st.cls}">${esc(st.label)}</span></div>
+    <div class="row between"><span class="when">${esc(fmtDate(r.fecha))}${r.hora?" · "+esc(fmtHora(r.hora)):""}</span><span class="chip ${st.cls}">${esc(st.label)}</span></div>
     <div class="row between" style="margin-top:4px"><span style="font-weight:600">${esc(clubName(r))}</span>
     <span class="muted small">${r.tipo==="fija"?"Pareja fija":"Royal"} · ${n}/${r.maxJugadores||"∞"} jugadores · ${r.canchas} cancha${r.canchas>1?"s":""}</span></div>
-    ${!(r.partidos||[]).length&&r.maxJugadores>n?`<div class="row" style="margin-top:8px">${buscandoAhora(r)?`<span class="chip busca">📣 Buscan jugador</span>`:""}<span class="chip falta">${r.maxJugadores-n===1?"Falta 1 lugar":"Faltan "+(r.maxJugadores-n)+" lugares"}</span>${r.nivel?`<span class="chip nivel">Nivel ${esc(rangoTxt(r.nivel))}</span>`:""}${S.uid&&(r.jugadores||[]).includes(S.uid)?`<span class="chip">Ya estás apuntado</span>`:""}</div>`:""}</button>`;
+    ${!(r.partidos||[]).length&&r.maxJugadores>n?`<div class="row" style="margin-top:8px"><span class="chip falta">${r.maxJugadores-n===1?"Falta 1 jugador":"Faltan "+(r.maxJugadores-n)+" jugadores"}</span>${S.uid&&(r.jugadores||[]).includes(S.uid)?`<span class="chip">Ya estás apuntado</span>`:""}</div>`:""}</button>`;
 }
 function vRetas(){
   const all=Object.entries(S.retas).sort(retaOrder);
@@ -519,9 +531,8 @@ function vRetas(){
   const fin=all.filter(([id,r])=>esHist(r)||retaState(id,r).label==="Terminada");
   return`<div class="stack">
     ${instalarHTML()}
-    ${avisoPushHTML()}
-    <div class="section-head"><h1>Retas</h1>${S.uid?`<button class="btn primary" data-act="nueva">Crear reta</button>`:`<button class="btn" data-act="tab" data-v="inicio">Entrar</button>`}</div>
-    ${!all.length?`<div class="panel empty"><strong>Todavía no hay retas</strong>Crea la primera reta: club, hora, canchas, reglas y sorteo de partidos.</div>`:""}
+    <div class="section-head"><h1>Jugadas</h1>${S.uid?`<button class="btn primary" data-act="nueva">Nueva jugada</button>`:`<button class="btn" data-act="tab" data-v="inicio">Entrar</button>`}</div>
+    ${!all.length?`<div class="panel empty"><strong>Todavía no hay jugadas</strong>Crea una jugada y la app sortea los partidos, o sube la foto de un resultado en Fotos.</div>`:""}
     ${act.length?`<h2>Próximas y en juego</h2><div class="list">${act.map(retaCard).join("")}</div>`:""}
     ${fin.length?`<h2 style="margin-top:8px">Terminadas</h2><div class="list">${fin.map(retaCard).join("")}</div>`:""}
   </div>`;
@@ -534,34 +545,33 @@ function vNueva(){
   const custom=d.reglas.filter(r=>!PRESET_RULES.includes(r));
   return`<form class="stack" data-form="reta">
     <div class="row"><button type="button" class="btn ghost" data-act="tab" data-v="retas">← Retas</button></div>
-    <h1>Nueva reta</h1>
+    <h1>Nueva jugada</h1>
     <div class="panel stack">
       <div class="field"><label class="label" for="r-clubt">Club</label><input id="r-clubt" name="clubTexto" list="clubs-list" value="${esc(d.clubTexto)}" placeholder="Escribe o elige el club" autocomplete="off">
         <datalist id="clubs-list">${knownClubs().map(c=>`<option value="${esc(c)}">`).join("")}</datalist></div>
       <div class="grid2"><div class="field"><label class="label" for="r-fecha">Fecha</label><input id="r-fecha" type="date" name="fecha" value="${esc(d.fecha)}" required></div>
       <div class="field"><label class="label" for="r-hora">Hora</label><input id="r-hora" type="time" name="hora" value="${esc(d.hora)}" required></div></div>
       <div class="grid2"><div class="field"><label class="label" for="r-canchas">Canchas</label><input id="r-canchas" type="number" min="1" max="12" name="canchas" value="${d.canchas}"></div>
-      <div class="field"><label class="label" for="r-max">Máx. jugadores</label><input id="r-max" type="number" min="4" max="64" name="maxJugadores" value="${d.maxJugadores}"></div></div>
-      <div class="field"><label class="label" for="r-nivel">Nivel de la reta</label><select id="r-nivel" name="nivel">${RANGOS.map(([v,l])=>`<option value="${v}" ${(d.nivel||"")===v?"selected":""}>${l}</option>`).join("")}</select></div>
-      <p class="muted small" style="margin:0">Si falta gente, la app avisa primero a los jugadores de este nivel.</p>
+      <div class="field"><label class="label" for="r-max">Jugadores</label><input id="r-max" type="number" min="4" max="64" name="maxJugadores" value="${d.maxJugadores}"></div></div>
+
     </div>
     <div class="panel stack">
       <span class="label">Tipo de juego</span>
-      <div class="seg"><label><input type="radio" name="tipo" value="royal" ${d.tipo==="royal"?"checked":""}>Royal</label><label><input type="radio" name="tipo" value="fija" ${d.tipo==="fija"?"checked":""}>Pareja fija</label></div>
-      <p class="muted small" style="margin:0">${d.tipo==="royal"?"Royal: las parejas cambian cada ronda y cada quien suma sus propios puntos.":"Pareja fija: las parejas se mantienen y juegan todas contra todas."}</p>
+      <div class="seg"><label><input type="radio" name="tipo" value="royal" ${d.tipo==="royal"?"checked":""}>Individual (Royal)</label><label><input type="radio" name="tipo" value="fija" ${d.tipo==="fija"?"checked":""}>Pareja fija</label></div>
+      <p class="muted small" style="margin:0">${d.tipo==="royal"?"Individual: las parejas cambian cada ronda y cada quien suma sus propios puntos.":"Pareja fija: las parejas se mantienen y juegan todas contra todas."}</p>
       <div class="grid2"><div class="field"><label class="label" for="r-puntos">Puntos</label><input id="r-puntos" type="number" min="1" max="99" name="puntos" value="${d.puntos}"></div>
       <div class="field"><span class="label">Cómo se cuentan</span><div class="seg"><label><input type="radio" name="modo" value="total" ${d.modo==="total"?"checked":""}>Totales</label><label><input type="radio" name="modo" value="meta" ${d.modo==="meta"?"checked":""}>A llegar</label></div></div></div>
       <p class="muted small" style="margin:0">${d.modo==="total"?`Se juegan ${d.puntos} puntos en total y el marcador debe sumar ${d.puntos} (ej. ${Math.ceil(d.puntos/2)+1}–${Math.floor(d.puntos/2)-1}).`:`Gana la pareja que llegue primero a ${d.puntos}.`}</p>
     </div>
-    <div class="panel stack">
+    <details class="panel stack"><summary style="cursor:pointer;font-weight:600">Reglas (opcional)</summary>
       <span class="label">Reglas de la reta</span>
       <div>${PRESET_RULES.map((r,i)=>`<label class="check"><input type="checkbox" name="preset" value="${i}" ${d.reglas.includes(r)?"checked":""}>${esc(r)}</label>`).join("")}
       ${custom.map((r,i)=>`<div class="check"><span style="flex:1">${esc(r)}</span><button type="button" class="btn ghost sm" data-act="delrule" data-i="${esc(r)}" aria-label="Quitar regla">Quitar</button></div>`).join("")}</div>
       <div class="row"><div class="field" style="flex:1"><label class="label" for="r-extra">Otra regla</label><input id="r-extra" name="extra" value="${esc(d.extra)}" placeholder="Ej. Bola por la reja: invita una ronda"></div>
       <button type="button" class="btn" data-act="addrule" style="align-self:flex-end">Agregar</button></div>
       <div class="field"><label class="label" for="r-castigo">Nombre del contador de castigos</label><input id="r-castigo" name="castigo" value="${esc(d.castigo)}"></div>
-    </div>
-    <button class="btn primary" type="submit">Crear reta</button>
+    </details>
+    <button class="btn primary" type="submit">Crear y elegir jugadores</button>
   </form>`;
 }
 
@@ -593,10 +603,10 @@ function vReta(){
   ${bs.length?bannerHTML(bs[hashStr(id)%bs.length]):""}
   <div class="panel stack"><div class="row between"><span class="chip ${st.cls}">${esc(st.label)}</span><span class="muted small">${fija?"Pareja fija":"Royal"}</span></div>
     <h1>${clubPorNombre(clubName(r))?`<button class="linkclub" data-act="verClub" data-id="${esc(clubPorNombre(clubName(r)).id)}">${esc(clubName(r))}</button>`:esc(clubName(r))}</h1>
-    <div class="row" style="font-family:var(--f-display);font-size:20px;font-weight:700;text-transform:uppercase">${esc(fmtDate(r.fecha))} · ${esc(fmtHora(r.hora))}</div>
-    <div class="row"><span class="chip">${r.canchas} cancha${r.canchas>1?"s":""}</span><span class="chip">${ins.length}/${r.maxJugadores} jugadores</span><span class="chip">${r.modo==="total"?`${r.puntos} puntos totales`:`A ${r.puntos} puntos`}</span>${r.nivel?`<span class="chip nivel">Nivel ${esc(rangoTxt(r.nivel))}</span>`:""}</div>
+    <div class="row" style="font-family:var(--f-display);font-size:20px;font-weight:700;text-transform:uppercase">${esc(fmtDate(r.fecha))}${r.hora?" · "+esc(fmtHora(r.hora)):""}</div>
+    <div class="row"><span class="chip">${r.canchas} cancha${r.canchas>1?"s":""}</span><span class="chip">${ins.length}/${r.maxJugadores} jugadores</span><span class="chip">${r.modo==="total"?`${r.puntos} puntos totales`:`A ${r.puntos} puntos`}</span></div>
     ${(r.reglas||[]).length?`<div><span class="label">Reglas</span><ul class="rules">${r.reglas.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
-    <button class="btn wa" data-act="compartir">${WA_SVG}Compartir reta</button>
+    <button class="btn wa" data-act="compartir">${WA_SVG}${(r.partidos||[]).length?"Compartir sorteo por WhatsApp":"Compartir jugada"}</button>
   </div>
   ${S.compartir===id?compartirHTML(id,r):""}`;
   const meIn=S.uid&&ins.includes(S.uid);const hasMe=S.uid&&S.players[S.uid];
@@ -628,7 +638,7 @@ function vReta(){
     h+=`<div class="panel"><div class="row">${ins.map(pid=>`<span class="chip">${esc(pname(pid))}${nvTag(pid)}</span>`).join("")}</div></div>`;
   }
   const faltan=r.maxJugadores-ins.length;
-  if(S.uid&&(C||meIn)&&!ps.length&&faltan>0&&!retaPasada(r)){
+  if(false&&S.uid&&(C||meIn)&&!ps.length&&faltan>0&&!retaPasada(r)){
     h+=`<div class="falta-box"><div><b>¿${faltan===1?"Te falta 1":"Te faltan "+faltan}?</b><div class="muted small">La app avisa a los jugadores ${r.nivel?"de nivel "+esc(rangoTxt(r.nivel)):"de nivel parecido"} que suelen jugar a esta hora.${r.buscando?` Último aviso ${esc(haceCuanto(r.buscando))}.`:""}</div></div><button class="btn ball" data-act="faltaUno">📣 Avisar</button></div>`;
   }
   if(W&&!ps.length){
@@ -636,7 +646,14 @@ function vReta(){
     const OR=opcionesRondas(ins.length,r.canchas);if(!S.rondasSel||S.rondasRid!==id){S.rondasSel=OR.def;S.rondasRid=id}
     const sel=OR.o.find(x=>x.R===S.rondasSel)||OR.o[OR.def-1];const mp=minPartido(r);
     const nPar=Math.floor(ins.length/2),rFija=nPar%2?nPar:nPar-1,mFija=nPar*(nPar-1)/2,rondasFija=Math.ceil(mFija/Math.max(1,Math.min(r.canchas,Math.floor(nPar/2))))*1;
-    h+=`<div class="panel stack"><h3>Sorteo de partidos</h3>
+    const fms=Object.values(S.formatos||{}).filter(f=>+f.nJugadores===ins.length).sort((a,b)=>(norm(b.club)===norm(clubName(r)))-(norm(a.club)===norm(clubName(r))));
+    const fSel=S.formatoSel&&S.formatoSel.rid===id?S.formatos[S.formatoSel.fid]:null;
+    if(!fija&&fms.length)h+=`<div class="panel stack"><h3>¿Cómo armar los partidos?</h3>
+      <div class="field"><select data-act="formatoSel"><option value="">Sorteo automático de la app</option>${fms.map(f=>`<option value="${esc(f.id)}" ${fSel&&fSel.id===f.id?"selected":""}>Formato de ${esc(f.club)} · ${esc(f.nombre)}</option>`).join("")}</select></div>
+      ${fSel?`<p class="muted small" style="margin:0">El número de cada jugador es su posición en el formato del club. Toca "Sortear posiciones" para cambiarlas al azar.</p>
+      <div class="pos-list">${ins.map((p,i)=>`<span class="chip"><b>${i+1}</b> ${esc(pname(p))}</span>`).join("")}</div>
+      <div class="row"><button class="btn" data-act="mezclarPos">Sortear posiciones</button><button class="btn ball" data-act="usarFormato" data-fid="${esc(fSel.id)}">Armar con el formato</button></div>`:""}</div>`;
+    if(!fSel)h+=`<div class="panel stack"><h3>Sorteo de partidos</h3>
       ${fija?`<p class="muted small" style="margin:0">Todas las parejas juegan contra todas: ${mFija} partidos en ${r.canchas} cancha${r.canchas>1?"s":""}${ins.length>=4?` · unos ${fmtDur(rondasFija*mp)}`:""}.</p>`:
       `<div class="field"><label class="label" for="rondas">Rondas</label><select id="rondas" data-act="rondasSel">${(()=>{const op=x=>`<option value="${x.R}" ${x.R===sel.R?"selected":""}>${x.R} ronda${x.R>1?"s":""} · ${x.parejo?`cada quien juega ${x.min}`:`juegan ${x.min} o ${x.max}`} · ~${fmtDur(x.R*mp)}</option>`;
         return`<optgroup label="Parejas (todos juegan igual)">${OR.o.filter(x=>x.parejo&&x.min>=1&&x.min<=8).map(op).join("")}</optgroup><optgroup label="Disparejas">${OR.o.filter(x=>!x.parejo&&x.R<=12&&x.min>=1).map(op).join("")}</optgroup>`})()}</select></div>
@@ -644,6 +661,7 @@ function vReta(){
         :`<div class="banner" style="border-left:3px solid var(--bad)">Con ${sel.R} rondas, ${sel.extra} jugador${sel.extra>1?"es":""} jugaría${sel.extra>1?"n":""} un partido más que los demás. Para que salga parejo elige ${OR.o.filter(x=>x.parejo&&x.R<=16).slice(0,3).map(x=>x.R).join(", ")} rondas.</div>`}`}
       <button class="btn ball" data-act="sortear" ${ok?"":"disabled"}>Sortear partidos</button>
       ${ok?"":`<p class="muted small" style="margin:0">${fija?"Se necesitan al menos 2 parejas completas.":"Se necesitan al menos 4 jugadores."}</p>`}</div>`;
+    else h+="";
   }
   if(ps.length){
     h+=`<div class="section-head"><h2>Partidos</h2>${W&&!anyScore?`<button class="btn sm" data-act="resortear">Volver a sortear</button>`:""}</div>`;
@@ -663,6 +681,7 @@ function vReta(){
       ${tb.map((x,i)=>`<tr class="${i===0&&x.pj?"first":""}"><td class="pos">${i+1}</td><td>${x.ids.map(p=>esc(pname(p))).join(" / ")}</td><td>${x.pj}</td><td>${x.pg}</td><td>${x.pf}</td><td>${x.pj?(x.pf/x.pj).toFixed(1):"–"}</td><td class="${x.pf-x.pc>0?"up":x.pf-x.pc<0?"down":""}">${x.pf-x.pc>0?"+":""}${x.pf-x.pc}</td></tr>`).join("")}
     </tbody></table>${(r.reglas||[]).some(x=>/primer lugar/i.test(x))&&st.label==="Terminada"&&tb[0]?`<p class="small" style="margin:10px 0 0"><b>${tb[0].ids.map(p=>esc(pname(p))).join(" y ")}</b> no paga cancha.</p>`:""}</div>`;
     if(anyScore)h+=`<button class="btn ball" data-act="podio">📸 Compartir podio</button>`;
+    if(W)h+=`<button class="btn" data-act="fotoResultado">📷 Subir foto del resultado</button>`;
   }
   if(ins.length){
     h+=`<h2>${esc(r.castigo||"Castigos")}</h2><div class="panel">${ins.map(pid=>{const n=(S.multas[scoreKey(id,pid)]||{}).n||0;
@@ -724,16 +743,19 @@ function textoReta(id,r){
   const ins=r.jugadores||[];const f=r.fecha?new Date(r.fecha+"T12:00"):null;
   const dia=f?f.toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"}):"";
   const falt=Math.max(0,(r.maxJugadores||0)-ins.length);const ps=(r.partidos||[]).length;
-  const L=["🎾 *RETA DE PÁDEL*","",`📍 *${clubName(r)}*`,`📅 ${dia.charAt(0).toUpperCase()+dia.slice(1)}`,`🕖 ${fmtHora(r.hora)}`,
-    `🏓 ${r.tipo==="fija"?"Pareja fija":"Royal"} · ${r.modo==="total"?r.puntos+" puntos totales":"a "+r.puntos+" puntos"} · ${r.canchas} cancha${r.canchas>1?"s":""}`];
+  const L=["🎾 *JUGADA DE PÁDEL*","",`📍 *${clubName(r)}*`,`📅 ${dia.charAt(0).toUpperCase()+dia.slice(1)}`,`🕖 ${fmtHora(r.hora)}`,
+    `🏓 ${r.tipo==="fija"?"Pareja fija":"Individual (Royal)"} · ${r.modo==="total"?r.puntos+" puntos totales":"a "+r.puntos+" puntos"} · ${r.canchas} cancha${r.canchas>1?"s":""}`];
   if((r.reglas||[]).length)L.push(`📋 ${r.reglas.join(" · ")}`);
   L.push("",`👥 *Jugadores (${ins.length}/${r.maxJugadores})*`);
   ins.forEach((p,i)=>L.push(`${i+1}. ${pname(p)}`));
   if(!ins.length)L.push("Todavía nadie, ¡sé el primero!");
   L.push("");
-  if(ps)L.push("✅ Partidos ya sorteados");
+  if(ps){L.push("🎲 *Partidos*");const rs=[...new Set(r.partidos.map(m=>m.ronda))].sort((a,b)=>a-b);
+    rs.forEach(rn=>{L.push("",`*Ronda ${rn}*`);const ms=r.partidos.filter(m=>m.ronda===rn).sort((a,b)=>a.cancha-b.cancha);
+      ms.forEach(m=>L.push(`C${m.cancha}: ${m.a.map(pname).join(" y ")} vs ${m.b.map(pname).join(" y ")}`));
+      const juegan=new Set(ms.flatMap(m=>[...m.a,...m.b]));const des=ins.filter(p=>!juegan.has(p));if(des.length)L.push(`Descansa: ${des.map(pname).join(", ")}`)})}
   else L.push(falt?`⏳ *${falt===1?"Falta 1 lugar":"Faltan "+falt+" lugares"}*`:"✅ *Reta llena*");
-  L.push("",falt&&!ps?"Apúntate aquí 👇":"Ver la reta 👇",APP_URL+"#reta-"+id);
+  L.push("",ps?"Resultados y ranking 👇":"Ver la jugada 👇",APP_URL+"#reta-"+id);
   return L.join("\n");
 }
 function compartirHTML(id,r){const t=textoReta(id,r);
@@ -819,10 +841,10 @@ function vClubPub(){
   ${!mio&&S.uid?`<p class="muted small" style="margin:0">Los horarios los actualiza el club. Para apartar, escríbele por WhatsApp.</p>`:""}
   </div>`;
 }
-async function comprimirFoto(file){
+async function comprimirFoto(file,max){
   const url=URL.createObjectURL(file);
   try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
-    const k=Math.min(1,1600/Math.max(img.width,img.height));const cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
+    const k=Math.min(1,(max||1600)/Math.max(img.width,img.height));const cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
     cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);return cv.toDataURL("image/jpeg",.82).split(",")[1];}
   finally{URL.revokeObjectURL(url)}
 }
@@ -1073,6 +1095,186 @@ function mostrarPodio(blob,nombre,r){
   document.body.appendChild(d);
 }
 
+/* ---------- pestaña Fotos: leer resultado, orden y formato con IA ---------- */
+function lev(a,b){if(a===b)return 0;const m=a.length,n=b.length;if(!m||!n)return m||n;let p=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
+function puntajeNombre(t,p){const cs=[p.alias,p.nombre,[p.nombre,p.apellido].filter(Boolean).join(" ")].filter(Boolean).map(normTxt);let s=0;
+  for(const c of cs){if(!c)continue;if(c===t)s=Math.max(s,100);else if(c.startsWith(t)||t.startsWith(c))s=Math.max(s,75);else if(c.includes(t)||t.includes(c))s=Math.max(s,62);
+    else{const d=lev(c,t);if(d<=Math.max(1,Math.floor(Math.max(c.length,t.length)/4)))s=Math.max(s,58-d)}}return s}
+/** Para cada nombre leído sugiere un jugador registrado, sin repetir. */
+function sugerirTodos(nombres,pref){const usados=new Set();const out=[];
+  const cand=nombres.map((txt,i)=>{const t=normTxt(txt);const l=t?Object.values(S.players).map(p=>({id:p.id,s:puntajeNombre(t,p)+((pref||[]).includes(p.id)?15:0)})).filter(x=>x.s>=55).sort((a,b)=>b.s-a.s):[];return{i,l}});
+  cand.sort((a,b)=>((b.l[0]||{}).s||0)-((a.l[0]||{}).s||0));
+  for(const c of cand){const x=c.l.find(y=>!usados.has(y.id));out[c.i]=x?x.id:"";if(x)usados.add(x.id)}
+  return out}
+function nuevaFoto(tipo){return{tipo,paso:"elegir",fuente:"",club:"",fecha:today(),hora:"",puntos:24,modo:"total",tipoJ:"royal"}}
+function fuentesResultado(){
+  const rs=Object.entries(S.retas).filter(([,r])=>!esHist(r)&&(r.partidos||[]).length).sort(retaOrder).slice(0,15);
+  return{rs,fs:Object.values(S.formatos||{}).sort((a,b)=>a.club.localeCompare(b.club)||a.nJugadores-b.nJugadores)}}
+function opJugadores(sel,pref){const all=Object.values(S.players).sort((a,b)=>pname(a.id).localeCompare(pname(b.id)));
+  const p=all.filter(x=>(pref||[]).includes(x.id)),o=all.filter(x=>!(pref||[]).includes(x.id));
+  const op=x=>`<option value="${esc(x.id)}" ${sel===x.id?"selected":""}>${esc(pname(x.id))}${pfull(x.id)?" · "+esc(pfull(x.id)):""}</option>`;
+  return`<option value="">— ¿Quién es? —</option><option value="__nuevo" ${sel==="__nuevo"?"selected":""}>➕ Jugador nuevo (con celular)</option><option value="__omitir" ${sel==="__omitir"?"selected":""}>✖ No contar esta fila</option>
+    ${p.length?`<optgroup label="En esta jugada">${p.map(op).join("")}</optgroup>`:""}<optgroup label="Todos">${o.map(op).join("")}</optgroup>`}
+function selJugadorHTML(base,obj,pref){
+  return`<select data-fx="${base}.sel" data-re="1" aria-label="Jugador">${opJugadores(obj.sel,pref)}</select>
+   ${obj.sel==="__nuevo"?`<div class="grid2" style="margin-top:6px"><input data-fx="${base}.alias" value="${esc(obj.alias||"")}" placeholder="Alias"><input data-fx="${base}.cel" type="tel" inputmode="numeric" value="${esc(obj.cel||"")}" placeholder="Celular 10 dígitos"></div>`:""}`}
+function datosJugadaHTML(F,conTipo){
+  return`<div class="panel stack"><div class="grid2"><div class="field"><label class="label">Club</label><input data-fx="club" list="clubs-list2" value="${esc(F.club||"")}" placeholder="Club"><datalist id="clubs-list2">${[...new Set([...knownClubs(),...Object.values(S.formatos||{}).map(f=>f.club)])].map(c=>`<option value="${esc(c)}">`).join("")}</datalist></div>
+    <div class="field"><label class="label">Fecha</label><input data-fx="fecha" type="date" value="${esc(F.fecha||"")}"></div></div>
+    <div class="grid2"><div class="field"><label class="label">Hora</label><input data-fx="hora" type="time" value="${esc(F.hora||"")}"></div>
+    <div class="field"><label class="label">Puntos por partido</label><input data-fx="puntos" data-t="num" type="number" min="1" max="99" value="${F.puntos||24}"></div></div>
+    ${conTipo?`<div class="seg"><label><input type="radio" data-fx="tipoJ" data-re="1" value="royal" ${F.tipoJ!=="fija"?"checked":""}>Individual (Royal)</label><label><input type="radio" data-fx="tipoJ" data-re="1" value="fija" ${F.tipoJ==="fija"?"checked":""}>Pareja fija</label></div>`:""}</div>`}
+
+function vFotos(){
+  if(!S.uid)return`<div class="stack"><h1>Fotos</h1><div class="panel empty"><strong>Entra para subir fotos</strong>Con tu celular y PIN. Así queda registrado quién subió cada resultado.<div style="margin-top:12px"><button class="btn primary" data-act="tab" data-v="inicio">Entrar</button></div></div></div>`;
+  const F=S.foto;
+  const aviso=S.fotosOk?"":`<div class="banner" style="border-left:3px solid var(--bad)">${S.isOwner?`La lectura de fotos todavía no está activada. Ve a <b>Mi perfil → Lectura de fotos</b> y pega tu llave de Gemini.`:"La lectura de fotos todavía no está activada. Pídeselo al administrador."}</div>`;
+  if(!F){const fs=Object.values(S.formatos||{}).sort((a,b)=>a.club.localeCompare(b.club));
+    return`<div class="stack"><h1>Fotos</h1>${aviso}
+    <button class="opt" data-act="fotoTipo" data-t="resultado"><span class="ic">📷</span><span><b>Resultado de una jugada</b><div class="muted small">Foto de la tabla de puntos. Si el orden se armó en la app o es un formato del club, la app sabe quién jugó contra quién.</div></span><span class="ar">›</span></button>
+    <button class="opt" data-act="fotoTipo" data-t="orden"><span class="ic">🗒️</span><span><b>Orden ya establecido</b><div class="muted small">Foto del orden de partidos que ya se armó (por ejemplo, el que se mandó al grupo). Después subes el resultado.</div></span><span class="ar">›</span></button>
+    <button class="opt" data-act="fotoTipo" data-t="formato"><span class="ic">🏟️</span><span><b>Formato royal de un club</b><div class="muted small">Foto del formato con números que usa el club. Se guarda y luego solo subes la foto del resultado.</div></span><span class="ar">›</span></button>
+    <h2>Formatos de clubs guardados</h2>
+    ${fs.length?`<div class="panel">${fs.map(f=>`<div class="sp-row"><div><b>${esc(f.club)}</b><div class="muted small">${esc(f.nombre)} · ${f.nJugadores} jugadores · ${f.canchas} cancha${f.canchas>1?"s":""} · ${f.rondas.length} rondas</div></div>
+      <div class="row" style="gap:6px"><button class="btn sm" data-act="verFormato" data-id="${esc(f.id)}">Ver</button>${S.isOwner||f.creadorId===S.uid?`<button class="btn sm danger" data-act="borrarFormato" data-id="${esc(f.id)}">Borrar</button>`:""}</div></div>
+      ${S.verFormato===f.id?`<div class="preview" style="margin-bottom:10px">${formatoTexto(f)}</div>`:""}`).join("")}</div>`:`<div class="panel empty"><strong>Sin formatos</strong>Sube la foto del formato royal de un club para usarlo después.</div>`}</div>`}
+  const titulo={resultado:"Resultado de una jugada",orden:"Orden ya establecido",formato:"Formato royal de un club"}[F.tipo];
+  let h=`<div class="stack"><div class="row"><button class="btn ghost" data-act="fotoCancelar">← Fotos</button></div><h1>${titulo}</h1>${aviso}`;
+  if(F.paso==="leyendo")return h+`<div class="panel empty"><strong>Leyendo la foto…</strong>Esto tarda de 10 a 30 segundos.${F.img?`<img src="${F.img}" alt="Foto" style="margin-top:14px;max-width:100%;max-height:300px;border-radius:12px">`:""}</div></div>`;
+  if(F.paso==="elegir"){
+    if(F.tipo==="resultado"){const{rs,fs}=fuentesResultado();
+      h+=`<div class="panel stack"><div class="field"><label class="label">¿Con qué orden se jugó?</label><select data-fx="fuente" data-re="1">
+        <option value="" ${!F.fuente?"selected":""}>— Elige —</option>
+        ${rs.length?`<optgroup label="Jugadas de la app">${rs.map(([id,r])=>`<option value="reta:${esc(id)}" ${F.fuente==="reta:"+id?"selected":""}>${esc(clubName(r))} · ${esc(fmtDate(r.fecha))} ${esc(fmtHora(r.hora))} · ${(r.jugadores||[]).length} jug.</option>`).join("")}</optgroup>`:""}
+        ${fs.length?`<optgroup label="Formato de club">${fs.map(f=>`<option value="formato:${esc(f.id)}" ${F.fuente==="formato:"+f.id?"selected":""}>${esc(f.club)} · ${esc(f.nombre)} (${f.nJugadores} jug.)</option>`).join("")}</optgroup>`:""}
+        <option value="nada" ${F.fuente==="nada"?"selected":""}>No sé el orden (solo cuentan los puntos)</option></select></div>
+        ${F.fuente==="nada"?`<p class="muted small" style="margin:0">Sin el orden, los puntos suman al ranking pero no se sabe quién jugó contra quién (no cuenta para el rating).</p>`:""}</div>`;
+      if(F.fuente&&!F.fuente.startsWith("reta:"))h+=datosJugadaHTML(F,false);
+    }
+    if(F.tipo==="orden")h+=datosJugadaHTML(F,true);
+    if(F.tipo==="formato")h+=`<div class="panel stack"><div class="field"><label class="label">Club</label><input data-fx="club" list="clubs-list2" value="${esc(F.club||"")}" placeholder="Nombre del club"><datalist id="clubs-list2">${knownClubs().map(c=>`<option value="${esc(c)}">`).join("")}</datalist></div>
+      <p class="muted small" style="margin:0">Toma la foto de la hoja del royal del club, donde se ven las rondas con los números de cada jugador.</p></div>`;
+    const listo0=F.tipo==="resultado"?!!F.fuente&&(F.fuente.startsWith("reta:")||!!(F.club||"").trim()):!!(F.club||"").trim();
+    h+=`<label class="btn ball" style="text-align:center;${S.fotosOk?"":"pointer-events:none;opacity:.5"}">📷 Tomar o elegir foto<input type="file" accept="image/*" data-act="fotoArchivo" hidden></label>`;
+    return h+`</div>`;
+  }
+  // revisar
+  h+=`<details class="panel"><summary style="cursor:pointer;font-weight:600">Ver la foto</summary><img src="${F.img}" alt="Foto" style="margin-top:10px;width:100%;border-radius:12px"></details>`;
+  if(F.tipo==="formato")h+=revisarFormato(F);
+  if(F.tipo==="orden")h+=revisarOrden(F);
+  if(F.tipo==="resultado")h+=revisarResultado(F);
+  return h+`</div>`;
+}
+function formatoTexto(f){return f.rondas.map(rd=>`<b>Ronda ${rd.ronda}</b>\n`+rd.partidos.map(m=>`  C${m.cancha}: ${m.a.join("-")} vs ${m.b.join("-")}`).join("\n")).join("\n")}
+function revisarFormato(F){const d=F.datos;const n=+F.nJugadores||0;
+  const errores=[];d.rondas.forEach((rd,i)=>{const v=rd.partidos.flatMap(m=>[...m.a,...m.b]).map(Number);if(new Set(v).size!==v.length)errores.push(`Ronda ${i+1}: hay un número repetido.`);if(v.some(x=>x<1||x>n))errores.push(`Ronda ${i+1}: hay números fuera de 1 a ${n}.`)});
+  return`<div class="panel stack"><div class="grid2"><div class="field"><label class="label">Club</label><input data-fx="club" value="${esc(F.club||"")}"></div>
+    <div class="field"><label class="label">Jugadores</label><input data-fx="nJugadores" data-t="num" data-re="1" type="number" min="4" max="40" value="${n}"></div></div>
+    <div class="field"><label class="label">Nombre del formato</label><input data-fx="nombre" value="${esc(F.nombre||"")}" placeholder="Ej. Royal 8 jugadores"></div>
+    <p class="muted small" style="margin:0">Revisa que los números coincidan con la foto. Cada partido es pareja contra pareja.</p></div>
+    ${d.rondas.map((rd,i)=>`<div class="panel stack" style="gap:8px"><div class="ronda-h"><span>Ronda ${i+1}</span></div>${rd.partidos.map((m,k)=>`<div class="fmt-row"><span class="muted small">C${k+1}</span>
+      <input data-fx="datos.rondas.${i}.partidos.${k}.a.0" data-t="num" type="number" value="${m.a[0]}"><input data-fx="datos.rondas.${i}.partidos.${k}.a.1" data-t="num" type="number" value="${m.a[1]}">
+      <b>vs</b><input data-fx="datos.rondas.${i}.partidos.${k}.b.0" data-t="num" type="number" value="${m.b[0]}"><input data-fx="datos.rondas.${i}.partidos.${k}.b.1" data-t="num" type="number" value="${m.b[1]}">
+      <button class="btn ghost sm" data-act="fmtQuitar" data-i="${i}" data-k="${k}" aria-label="Quitar partido">✕</button></div>`).join("")}</div>`).join("")}
+    ${errores.length?`<div class="banner" style="border-left:3px solid var(--bad)">${errores.map(esc).join("<br>")}</div>`:""}
+    <button class="btn primary" data-act="fotoGuardar">Guardar formato</button>`}
+function nombresOrden(d){const set=[];const add=x=>{const t=String(x||"").trim();if(t&&!set.some(y=>normTxt(y)===normTxt(t)))set.push(t)};(d.jugadores||[]).forEach(add);(d.rondas||[]).forEach(rd=>(rd.partidos||[]).forEach(m=>[...(m.a||[]),...(m.b||[])].forEach(add)));return set}
+function revisarOrden(F){const ns=F.nombres;
+  const idDe=t=>{const k=ns.findIndex(y=>normTxt(y)===normTxt(t));const m=F.map[k]||{};return m.sel&&!m.sel.startsWith("__")?pname(m.sel):(m.sel==="__nuevo"?(m.alias||t)+" (nuevo)":"¿"+t+"?")};
+  return datosJugadaHTML(F,true)+`<h2>¿Quién es quién?</h2><div class="panel stack">${ns.map((t,k)=>`<div class="map-row"><div><span class="muted small">Leído</span><div><b>${esc(t)}</b></div></div><div>${selJugadorHTML("map."+k,F.map[k],[])}</div></div>`).join("")}</div>
+   <h2>Partidos</h2><div class="panel preview">${(F.datos.rondas||[]).map((rd,i)=>`<b>Ronda ${rd.ronda||i+1}</b>\n`+(rd.partidos||[]).map((m,k)=>`  C${m.cancha||k+1}: ${(m.a||[]).map(idDe).join(" y ")} vs ${(m.b||[]).map(idDe).join(" y ")}`).join("\n")).join("\n")}</div>
+   <button class="btn primary" data-act="fotoGuardar">Guardar jugada</button>`}
+/** Calcula los partidos con marcador a partir de las filas leídas y el orden conocido. */
+function calcularResultado(F){
+  const filas=F.filas.filter(f=>f.sel&&f.sel!=="__omitir");const fuente=F.fuente||"";let partidos=[],jug=[];const avisos=[];
+  const idFila=f=>f.sel==="__nuevo"?"nuevo:"+F.filas.indexOf(f):f.sel;
+  if(fuente.startsWith("reta:")){const r=S.retas[fuente.slice(5)];if(!r)return{partidos,avisos:["La jugada ya no existe."]};
+    jug=r.jugadores||[];partidos=(r.partidos||[]).map(m=>({...m}));}
+  else if(fuente.startsWith("formato:")){const f=S.formatos[fuente.slice(8)];if(!f)return{partidos,avisos:["El formato ya no existe."]};
+    const porPos={};filas.forEach(x=>{const p=+x.pos;if(p)porPos[p]=idFila(x)});
+    for(let i=1;i<=f.nJugadores;i++){if(!porPos[i])avisos.push(`Falta el jugador de la posición ${i}.`);jug.push(porPos[i]||"")}
+    f.rondas.forEach(rd=>rd.partidos.forEach(m=>partidos.push({id:"r"+rd.ronda+"c"+m.cancha,ronda:rd.ronda,cancha:m.cancha,a:m.a.map(x=>porPos[x]||""),b:m.b.map(x=>porPos[x]||"")})));}
+  else return{partidos:[],avisos,jug:filas.map(idFila)};
+  const filaDe={};filas.forEach(x=>{filaDe[idFila(x)]=x});
+  const rondas=[...new Set(partidos.map(m=>m.ronda))].sort((a,b)=>a-b);
+  const juegos={};partidos.slice().sort((a,b)=>a.ronda-b.ronda||a.cancha-b.cancha).forEach(m=>[...m.a,...m.b].forEach(p=>{(juegos[p]=juegos[p]||[]).push(m)}));
+  const pts=(p,m)=>{const f=filaDe[p];if(!f)return null;const l=f.puntos||[];
+    let v=l.length>=rondas.length?l[rondas.indexOf(m.ronda)]:l[(juegos[p]||[]).indexOf(m)];return v===""||v==null||isNaN(+v)?null:+v};
+  partidos.forEach(m=>{const A=m.a.map(p=>pts(p,m)),B=m.b.map(p=>pts(p,m));const va=A.find(x=>x!=null),vb=B.find(x=>x!=null);
+    m.pa=va??null;m.pb=vb??null;
+    if(A[0]!=null&&A[1]!=null&&A[0]!==A[1]||B[0]!=null&&B[1]!=null&&B[0]!==B[1])m.aviso="los compañeros no tienen los mismos puntos";
+    else if(m.pa==null||m.pb==null)m.aviso="falta un marcador";
+    else if(F.modo!=="meta"&&+F.puntos&&m.pa+m.pb!==+F.puntos&&fuente.startsWith("formato:"))m.aviso=`no suma ${F.puntos}`});
+  const sinFila=jug.filter(p=>p&&!filaDe[p]);if(sinFila.length)avisos.push("Sin puntos en la foto: "+sinFila.map(p=>p.startsWith("nuevo:")?"nuevo":pname(p)).join(", ")+".");
+  return{partidos,avisos,jug};
+}
+function revisarResultado(F){
+  const fuente=F.fuente||"";const r=fuente.startsWith("reta:")?S.retas[fuente.slice(5)]:null;const fm=fuente.startsWith("formato:")?S.formatos[fuente.slice(8)]:null;
+  const pref=r?r.jugadores||[]:[];const nc=Math.max(0,...F.filas.map(f=>(f.puntos||[]).length));
+  const C=calcularResultado(F);
+  const nom=p=>!p?"¿?":p.startsWith("nuevo:")?(F.filas[+p.slice(6)].alias||F.filas[+p.slice(6)].txt)+"*":pname(p);
+  let h=r?`<div class="panel"><b>${esc(clubName(r))}</b> · ${esc(fmtDate(r.fecha))} ${esc(fmtHora(r.hora))}</div>`:datosJugadaHTML(F,false);
+  h+=`<h2>Tabla leída</h2><p class="muted small" style="margin:0">Revisa que cada nombre sea el jugador correcto y que los puntos coincidan con la foto.</p>
+   <div class="stack" style="gap:10px">${F.filas.map((f,i)=>`<div class="panel stack fila-res" style="gap:8px"><div class="row between"><span class="muted small">Leído: <b style="color:var(--ink)">${esc(f.txt||"(sin nombre)")}</b></span>${fm?`<label class="row small" style="gap:6px">Posición <input data-fx="filas.${i}.pos" data-t="num" data-re="1" type="number" min="1" max="${fm.nJugadores}" value="${f.pos||""}" style="width:64px"></label>`:""}</div>
+     ${selJugadorHTML("filas."+i,f,pref)}
+     <div class="pts-row">${Array.from({length:nc},(_,j)=>`<input data-fx="filas.${i}.puntos.${j}" data-t="num" data-re="1" type="number" inputmode="numeric" value="${(f.puntos||[])[j]??""}" aria-label="Puntos ${j+1}">`).join("")}<span class="muted small">Total ${(f.puntos||[]).reduce((a,b)=>a+(+b||0),0)}${f.total!=null?` (foto: ${f.total})`:""}</span></div></div>`).join("")}</div>`;
+  if(fuente!=="nada"){h+=`<h2>Partidos con marcador</h2><div class="panel stack" style="gap:6px">${C.partidos.length?C.partidos.map(m=>`<div class="res-m ${m.aviso?"warn":""}"><span class="muted small">R${m.ronda} C${m.cancha}</span><span>${esc(m.a.map(nom).join(" y "))}</span><b>${m.pa??"–"}–${m.pb??"–"}</b><span>${esc(m.b.map(nom).join(" y "))}</span>${m.aviso?`<span class="small" style="color:var(--bad)">⚠ ${esc(m.aviso)}</span>`:""}</div>`).join(""):`<p class="muted" style="margin:0">Sin partidos.</p>`}</div>`}
+  if(C.avisos.length)h+=`<div class="banner" style="border-left:3px solid var(--bad)">${C.avisos.map(esc).join("<br>")}</div>`;
+  return h+`<button class="btn primary" data-act="fotoGuardar">Guardar resultado</button>`;
+}
+async function crearNuevos(lista){
+  for(const o of lista){if(o.sel!=="__nuevo")continue;const cel=String(o.cel||"").replace(/\D/g,"");
+    if(!(o.alias||o.txt))throw new Error("Escribe el alias del jugador nuevo.");if(cel.length!==10)throw new Error(`Falta el celular a 10 dígitos de ${o.alias||o.txt}.`);
+    const r=await call("agregarJugador",{alias:o.alias||o.txt,celular:cel});o.sel=r.jugador.id;S.players[r.jugador.id]=S.players[r.jugador.id]||r.jugador}}
+async function leerArchivoFoto(file){
+  const F=S.foto;if(!F)return;document.activeElement?.blur?.();
+  if(F.tipo==="resultado"&&!F.fuente)return flash("Primero elige con qué orden se jugó.");
+  if(!(F.fuente||"").startsWith("reta:")&&!(F.club||"").trim())return flash("Primero escribe el club.");F.paso="leyendo";const b64=await comprimirFoto(file,2000);F.img="data:image/jpeg;base64,"+b64;render();
+  let pistas=[];if(F.fuente&&F.fuente.startsWith("reta:")){const r=S.retas[F.fuente.slice(5)];pistas=(r&&r.jugadores||[]).map(pname)}
+  else pistas=Object.keys(S.players).map(pname).slice(0,40);
+  try{const r=await call("leerFoto",{tipo:F.tipo,base64:b64,mime:"image/jpeg",nombres:F.tipo==="formato"?[]:pistas});
+    if(S.foto!==F)return;const d=r.datos||{};F.fotoId=r.fotoId||"";F.datos=d;F.paso="revisar";
+    if(F.tipo==="formato"){d.rondas=(d.rondas||[]).map(rd=>({ronda:rd.ronda,partidos:(rd.partidos||[]).map(m=>({cancha:m.cancha,a:(m.a||[]).slice(0,2).map(Number),b:(m.b||[]).slice(0,2).map(Number)})).filter(m=>m.a.length===2&&m.b.length===2)})).filter(rd=>rd.partidos.length);
+      F.nJugadores=+d.jugadores||Math.max(0,...d.rondas.flatMap(rd=>rd.partidos.flatMap(m=>[...m.a,...m.b])));F.nombre=`Royal ${F.nJugadores} jugadores`;if(!d.rondas.length)throw new Error("No encontré partidos en la foto. Intenta con una foto más clara.")}
+    if(F.tipo==="orden"){F.nombres=nombresOrden(d);if(!F.nombres.length)throw new Error("No encontré nombres en la foto.");const sg=sugerirTodos(F.nombres,[]);F.map=F.nombres.map((t,k)=>({txt:t,sel:sg[k]||"",alias:t}));
+      if(d.club&&!F.club)F.club=d.club;if(/^\d{4}-\d{2}-\d{2}$/.test(d.fecha||""))F.fecha=d.fecha;if(/^\d{2}:\d{2}$/.test(d.hora||""))F.hora=d.hora}
+    if(F.tipo==="resultado"){let filas=(d.jugadores||[]).map((x,i)=>({txt:String(x.nombre||"").trim(),pos:x.pos!=null?+x.pos:i+1,puntos:(x.puntos||[]).map(v=>v==null?"":v),total:x.total??null}));
+      if(!filas.length&&(d.partidos||[]).length){ // marcadores por partido: se convierten en filas por jugador
+        const nombres=[];(d.partidos||[]).forEach(m=>[...(m.a||[]),...(m.b||[])].forEach(n=>{if(!nombres.some(y=>normTxt(y)===normTxt(n)))nombres.push(n)}));
+        const rondas=[...new Set(d.partidos.map(m=>+m.ronda||1))].sort((a,b)=>a-b);
+        filas=nombres.map((n,i)=>({txt:n,pos:i+1,puntos:rondas.map(rn=>{const m=d.partidos.find(m=>(+m.ronda||1)===rn&&[...(m.a||[]),...(m.b||[])].some(y=>normTxt(y)===normTxt(n)));if(!m)return"";return(m.a||[]).some(y=>normTxt(y)===normTxt(n))?m.pa:m.pb}),total:null}))}
+      if(!filas.length)throw new Error("No encontré la tabla de puntos en la foto.");
+      const r0=F.fuente.startsWith("reta:")?S.retas[F.fuente.slice(5)]:null;const sg=sugerirTodos(filas.map(f=>f.txt),r0?r0.jugadores:[]);
+      filas.forEach((f,i)=>{f.sel=sg[i]||"";f.alias=f.txt});F.filas=filas}
+    document.activeElement?.blur?.();render();window.scrollTo(0,0)}
+  catch(er){if(S.foto===F){F.paso="elegir";document.activeElement?.blur?.();render()}flash(er.message||"No se pudo leer la foto.")}
+}
+async function guardarFoto(){const F=S.foto;if(!F)return;
+  try{
+    if(F.tipo==="formato"){const r=await act("guardarFormato",{club:F.club,nombre:F.nombre,nJugadores:F.nJugadores,rondas:F.datos.rondas,fotoId:F.fotoId},"Formato guardado");if(r){S.foto=null;render()}return}
+    if(F.tipo==="orden"){if(!(F.club||"").trim())return flash("Escribe el club.");if(F.map.some(m=>!m.sel||m.sel==="__omitir"))return flash("Elige quién es cada nombre.");
+      await crearNuevos(F.map);const ids=k=>F.map[k].sel;const idx=t=>F.nombres.findIndex(y=>normTxt(y)===normTxt(t));
+      const ps=[];(F.datos.rondas||[]).forEach((rd,i)=>(rd.partidos||[]).forEach((m,k)=>ps.push({ronda:+rd.ronda||i+1,cancha:+m.cancha||k+1,a:(m.a||[]).map(t=>ids(idx(t))),b:(m.b||[]).map(t=>ids(idx(t)))})));
+      const jug=[...new Set(F.map.map(m=>m.sel))];const canchas=Math.max(1,...(F.datos.rondas||[]).map(rd=>(rd.partidos||[]).length));
+      const r=await act("guardarJugada",{club:F.club,fecha:F.fecha,hora:F.hora,canchas,tipo:F.tipoJ,puntos:F.puntos,modo:F.modo,jugadores:jug,partidos:ps,fotos:F.fotoId?[F.fotoId]:[]},"Jugada guardada. Cuando terminen, sube la foto del resultado.");
+      if(r){S.foto=null;go("reta",{retaId:r.reta.id})}return}
+    // resultado
+    const filas=F.filas.filter(f=>f.sel!=="__omitir");if(filas.some(f=>!f.sel))return flash("Elige quién es cada fila (o márcala como «No contar»).");
+    const usados=filas.map(f=>f.sel).filter(x=>x!=="__nuevo");if(new Set(usados).size!==usados.length)return flash("Hay un jugador elegido dos veces.");
+    if(!F.fuente.startsWith("reta:")&&!(F.club||"").trim())return flash("Escribe el club.");
+    const C0=calcularResultado(F);if(F.fuente.startsWith("formato:")&&C0.avisos.some(a=>/posición/.test(a)))return flash(C0.avisos[0]);
+    await crearNuevos(F.filas);const C=calcularResultado(F);
+    if(F.fuente.startsWith("reta:")){const rid=F.fuente.slice(5);const lista=C.partidos.filter(m=>m.pa!=null||m.pb!=null).map(m=>({matchId:m.id,a:m.pa,b:m.pb}));
+      const r=await act("marcadores",{retaId:rid,lista,fotoId:F.fotoId},`Listo: ${lista.length} marcadores guardados`);if(r){S.foto=null;go("reta",{retaId:rid})}return}
+    if(F.fuente.startsWith("formato:")){const fm=S.formatos[F.fuente.slice(8)];
+      const r=await act("guardarJugada",{club:F.club,fecha:F.fecha,hora:F.hora,canchas:fm.canchas,tipo:"royal",puntos:F.puntos,modo:F.modo,jugadores:C.jug,formatoId:fm.id,fotos:F.fotoId?[F.fotoId]:[],
+        partidos:C.partidos.map(m=>({ronda:m.ronda,cancha:m.cancha,a:m.a,b:m.b,pa:m.pa,pb:m.pb}))},"Resultado guardado");if(r){S.foto=null;go("reta",{retaId:r.reta.id})}return}
+    const r=await act("guardarJugada",{historica:true,club:F.club,fecha:F.fecha,hora:F.hora,jugadores:filas.map(f=>f.sel),filas:filas.map(f=>({jugadorId:f.sel,sets:(f.puntos||[]).map(v=>v===""?null:+v),total:""})),fotos:F.fotoId?[F.fotoId]:[]},"Puntos guardados en el ranking");
+    if(r){S.foto=null;go("reta",{retaId:r.reta.id})}
+  }catch(er){flash(er.message)}
+}
+
 function vWelcome(){
   const nP=Object.keys(S.players).length,nR=Object.keys(S.retas).length,nC=Object.keys(S.clubs).length;const of=oficial();
   return`<div class="wel"><div><p class="big">Bienvenido</p><p class="muted" style="margin:6px 0 0">Retas, marcadores y ranking del pádel en Tepic. ${nP} jugadores, ${nC} clubs y ${nR} retas registradas.</p></div>
@@ -1084,7 +1286,7 @@ function vWelcome(){
     <button class="btn primary" type="submit">Entrar</button>
     <p class="muted small" style="margin:0">¿Olvidaste tu PIN? Pídele al administrador que te asigne uno nuevo.</p></form>
   <button class="opt main" data-act="tab" data-v="registro"><span class="ic">J</span><span><b>Registrarme como jugador</b><div class="muted small">Con tu celular y un PIN de 6 números. Te apuntas a retas y entras al ranking.</div></span><span class="ar">›</span></button>
-  <button class="opt" data-act="regclub"><span class="ic">C</span><span><b>Registrar un club</b><div class="muted small">Crea tu cuenta y da de alta tu club para que las retas se armen ahí.</div></span><span class="ar">›</span></button>
+  <button class="opt" data-act="regclub" hidden><span class="ic">C</span><span><b>Registrar un club</b><div class="muted small">Crea tu cuenta y da de alta tu club para que las retas se armen ahí.</div></span><span class="ar">›</span></button>
   <button class="opt" data-act="skip"><span class="ic">→</span><span><b>Solo ver</b><div class="muted small">Entra sin registrarte a ver retas y ranking.</div></span><span class="ar">›</span></button></div>`;
 }
 function vRegistro(){
@@ -1110,7 +1312,7 @@ function vPerfil(){
   ${st?`<div class="panel row between"><div><span class="label">Rating</span><div class="elo" style="font-size:34px">${Math.round(st.elo)}</div></div>
     <div><span class="label">Lugar</span><div class="elo" style="font-size:34px">${pos}°</div></div>
     <div><span class="label">Récord</span><div class="elo" style="font-size:34px">${st.pg}-${st.pp}</div></div></div>`:""}
-  ${(()=>{const n=+p.nivel||0;let t="";
+  ${OCULTAR_NIVELES?"":(()=>{const n=+p.nivel||0;let t="";
     if(!n)t="Elige tu categoría para que te lleguen las retas de tu nivel.";
     else if(st&&st.pj>=8&&st.elo>=1080&&n>1)t=`Tu rating va muy arriba (${Math.round(st.elo)}). Podrías subir a <b>${NIVELES[n-1]}</b>.`;
     else if(st&&st.pj>=8&&st.elo<=920&&n<7)t=`Tu rating va abajo (${Math.round(st.elo)}). Quizá te conviene <b>${NIVELES[n+1]}</b> para jugar más parejo.`;
@@ -1120,7 +1322,7 @@ function vPerfil(){
     <div class="field"><label class="label" for="p-ape">Apellido</label><input id="p-ape" name="apellido" value="${esc(p.apellido)}"></div></div>
     <div class="grid2"><div class="field"><label class="label" for="p-ali">Alias</label><input id="p-ali" name="alias" value="${esc(p.alias)}" placeholder="Como te dicen en la cancha"></div>
     <div class="field"><span class="label">Celular</span><div class="tel" style="padding:10px 0">${esc(p.celular||"")}</div></div></div>
-    <div class="field"><label class="label" for="p-niv">Mi categoría</label><select id="p-niv" name="nivel"><option value="0">Sin elegir</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${+p.nivel===n?"selected":""}>${NIVELES[n]}</option>`).join("")}</select>
+    <div class="field" hidden><label class="label" for="p-niv">Mi categoría</label><select id="p-niv" name="nivel"><option value="0">Sin elegir</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${+p.nivel===n?"selected":""}>${NIVELES[n]}</option>`).join("")}</select>
       <div class="muted small" style="margin-top:4px">Sirve para que te avisen de retas de tu nivel cuando le falte gente. 1ra es el nivel más alto.</div></div>
     <button class="btn primary" type="submit">Guardar perfil</button></form>
   ${S.showPin?`<form class="panel stack" data-form="pin"><h3>Cambiar PIN</h3>
@@ -1132,6 +1334,8 @@ function vPerfil(){
   <div class="panel row between"><div><b>${c?esc(c.nombre):"¿Tienes un club?"}</b><div class="muted small">${c?"Tu club registrado":"Regístralo para que las retas se armen ahí"} · ${Object.keys(S.clubs).length} clubs en la app</div></div><span class="row" style="gap:6px">${c?`<button class="btn" data-act="verClub" data-id="${esc(c.id)}">Ver página</button>`:""}<button class="btn" data-act="tab" data-v="club">${c?"Editar club":"Registrar club"}</button></span></div>
   ${S.isOwner?`<h2>Administración</h2>
   <div class="panel row between"><div><b>Patrocinadores</b><div class="muted small">${activeSpons().length} activos · solo tú puedes administrarlos</div></div><button class="btn" data-act="tab" data-v="patros">Administrar</button></div>
+  <form class="panel stack" data-form="gemini"><div><b>Lectura de fotos (Gemini)</b><div class="muted small">${S.fotosOk?"✅ Activada. Si cambias de llave, pégala aquí.":"Para que la app lea las fotos, crea una llave gratis en <a href=\"https://aistudio.google.com/apikey\" target=\"_blank\" rel=\"noopener\">aistudio.google.com/apikey</a> y pégala aquí."}</div></div>
+    <div class="row"><input name="llave" type="password" autocomplete="off" placeholder="Llave de Gemini (AIza…)" style="flex:1"><button class="btn primary" type="submit">Guardar</button></div></form>
   <div class="panel row between"><div><b>Jugadores con cuenta</b><div class="muted small">Asigna PIN nuevo o bloquea cuentas</div></div><button class="btn" data-act="tab" data-v="cuentas">Ver cuentas</button></div>`:""}
   </div>`;
 }
@@ -1147,7 +1351,7 @@ function vCuentas(){
     <p class="muted small" style="margin:0">Cuando se registre con ese número crea su PIN y conserva su historial. Si ya juega en las retas cargadas de fotos, elígelo para no duplicarlo.</p>
     <button class="btn primary" type="submit">Guardar</button></form>
   ${!l?`<div class="panel empty"><strong>Cargando</strong></div>`:`<div class="panel">${l.map(j=>`<div class="sp-row"><div class="who"><div class="alias">${esc(j.alias||j.nombre)}</div><div class="muted small">${esc([j.nombre,j.apellido].filter(Boolean).join(" "))} · <span class="tel">${esc(j.celular)}</span>${j.rol==="ADMIN"?" · Admin":""}${j.pendiente?` · <span style="color:var(--ball)">Sin PIN aún</span>`:""}${j.estado==="bloqueado"?` · <span style="color:var(--bad)">Bloqueado</span>`:""}</div></div>
-    <div class="row" style="gap:6px"><select class="sm" data-act="nivelAdm" data-id="${esc(j.id)}" aria-label="Categoría de ${esc(j.alias||j.nombre)}" style="width:auto;padding:6px 8px"><option value="0">Sin nivel</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${nivelDe(j.id)===n?"selected":""}>${NIVELES[n]}</option>`).join("")}</select>${j.rol!=="ADMIN"?`<button class="btn sm" data-act="resetPin" data-id="${esc(j.id)}">PIN nuevo</button><button class="btn sm ${j.estado==="bloqueado"?"":"danger"}" data-act="bloquear" data-id="${esc(j.id)}" data-e="${j.estado==="bloqueado"?"activo":"bloqueado"}">${j.estado==="bloqueado"?"Desbloquear":"Bloquear"}</button>`:""}</div></div>`).join("")||`<p class="muted" style="margin:0">Nadie se ha registrado todavía.</p>`}</div>`}</div>`;
+    <div class="row" style="gap:6px"><select class="sm" data-act="nivelAdm" hidden data-id="${esc(j.id)}" aria-label="Categoría de ${esc(j.alias||j.nombre)}" style="width:auto;padding:6px 8px"><option value="0">Sin nivel</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${nivelDe(j.id)===n?"selected":""}>${NIVELES[n]}</option>`).join("")}</select>${j.rol!=="ADMIN"?`<button class="btn sm" data-act="resetPin" data-id="${esc(j.id)}">PIN nuevo</button><button class="btn sm ${j.estado==="bloqueado"?"":"danger"}" data-act="bloquear" data-id="${esc(j.id)}" data-e="${j.estado==="bloqueado"?"activo":"bloqueado"}">${j.estado==="bloqueado"?"Desbloquear":"Bloquear"}</button>`:""}</div></div>`).join("")||`<p class="muted" style="margin:0">Nadie se ha registrado todavía.</p>`}</div>`}</div>`;
 }
 function vPatros(){
   if(!S.isOwner)return`<div class="panel empty"><strong>Solo el administrador</strong>Esta sección la maneja el dueño de la app.</div>`;
@@ -1235,6 +1439,7 @@ function apply(d){
   S.multas=Object.fromEntries((d.multas||[]).map(m=>[m.id,m]));
   S.bloqueos=d.bloqueos||[];
   S.sponsors=Object.fromEntries((d.patrocinadores||[]).map(p=>[p.id,p]));
+  S.formatos=Object.fromEntries((d.formatos||[]).map(f=>[f.id,f]));S.fotosOk=!!d.fotosOk;
   const av=d.avisos||[];
   if(S.uid&&S.avisosVistos){av.filter(a=>!a.leido&&!S.avisosVistos.has(a.id)).slice(0,3).forEach(notificar)}
   S.avisos=av;S.avisosVistos=new Set(av.map(a=>a.id));
@@ -1317,6 +1522,12 @@ document.addEventListener("click",async e=>{
   if(a==="logout"){try{await call("salir")}catch(er){}setTok("");S.uid=null;S.yo=null;S.isOwner=false;S.canWrite=false;S.welcomed=false;S.version="";go("inicio");return refresh(true)}
   if(a==="resetPin"){const id=t.dataset.id;const r=await act("resetPin",{jugadorId:id});if(r){S.pinNuevo={id,pin:r.pin};S.cuentas=await call("jugadoresAdmin").catch(()=>S.cuentas);render();window.scrollTo(0,0)}return}
   if(a==="bloquear"){await act("estadoJugador",{jugadorId:t.dataset.id,estado:t.dataset.e},t.dataset.e==="bloqueado"?"Cuenta bloqueada":"Cuenta activa");S.cuentas=await call("jugadoresAdmin").catch(()=>S.cuentas);return render()}
+  if(a==="fotoTipo"){S.foto=nuevaFoto(t.dataset.t);return render()}
+  if(a==="fotoCancelar"){S.foto=null;window.scrollTo(0,0);return render()}
+  if(a==="fotoGuardar"){t.disabled=true;await guardarFoto();t.disabled=false;return}
+  if(a==="fmtQuitar"){const F=S.foto;F.datos.rondas[+t.dataset.i].partidos.splice(+t.dataset.k,1);F.datos.rondas=F.datos.rondas.filter(rd=>rd.partidos.length);S.keepScroll=true;return render()}
+  if(a==="verFormato"){S.verFormato=S.verFormato===t.dataset.id?null:t.dataset.id;S.keepScroll=true;return render()}
+  if(a==="borrarFormato"){if(S.confirmFmt!==t.dataset.id){S.confirmFmt=t.dataset.id;t.textContent="¿Seguro?";return}S.confirmFmt=null;return act("borrarFormato",{id:t.dataset.id},"Formato borrado")}
   if(a==="podio"){const r0=S.retas[S.retaId];if(!r0)return;flash("Armando la imagen…");
     try{let c=await podioCanvas(S.retaId,r0);let blob=null;try{blob=await new Promise(res=>c.toBlob(res,"image/png"))}catch(er){}
       if(!blob){for(const k in imgCache)imgCache[k]=null;c=await podioCanvas(S.retaId,r0);blob=await new Promise(res=>c.toBlob(res,"image/png"))}mostrarPodio(blob,"podio-"+normTxt(clubName(r0)).replace(/[^a-z0-9]+/g,"-")+"-"+r0.fecha+".png",r0)}catch(er){console.warn(er);flash("No se pudo armar la imagen.")}return}
@@ -1329,6 +1540,11 @@ document.addEventListener("click",async e=>{
     return setIns(r,ins,a==="join"?"Quedaste apuntado":"Te saliste de la reta")}
   if(a==="swap"){const ins=r.jugadores.slice();const i=+t.dataset.i;const full=ins.length-(ins.length%2);const k=(i+2)%full;[ins[i],ins[k]]=[ins[k],ins[i]];return setIns(r,ins)}
   if(a==="mixPairs")return setIns(r,shuffle(r.jugadores.slice()));
+  if(a==="mezclarPos"){const ins=shuffle((r.jugadores||[]).slice());return setIns(r,ins,"Posiciones sorteadas")}
+  if(a==="usarFormato"){const f=S.formatos[t.dataset.fid];const ins=r.jugadores||[];if(!f||ins.length!==+f.nJugadores)return flash("El formato es para "+(f?f.nJugadores:"?")+" jugadores.");
+    const ps=[];f.rondas.forEach(rd=>rd.partidos.forEach(m=>ps.push({id:"r"+rd.ronda+"c"+m.cancha,ronda:rd.ronda,cancha:m.cancha,a:m.a.map(x=>ins[x-1]),b:m.b.map(x=>ins[x-1])})));
+    S.formatoSel=null;S.keepScroll=true;return act("partidos",{retaId:rid,partidos:ps},"Partidos armados con el formato del club")}
+  if(a==="fotoResultado"){S.foto={tipo:"resultado",paso:"elegir",fuente:"reta:"+rid,fecha:r.fecha,hora:r.hora,club:clubName(r)};return go("fotos")}
   if(a==="sortear"){const ins=r.jugadores||[];let ps;
     if(r.tipo==="fija")ps=sortearFija(pairsOf(ins),r.canchas);else ps=sortearRoyal(ins,r.canchas,Math.max(1,S.rondasSel||+document.getElementById("rondas")?.value||4));
     S.keepScroll=true;return act("partidos",{retaId:rid,partidos:ps},"Partidos sorteados")}
@@ -1351,6 +1567,9 @@ document.addEventListener("change",e=>{
     rd.readAsDataURL(f);return}
   const sf=t.closest("form[data-form='spon']");if(sf){const svg=sf.querySelector("svg");if(svg){const fd=new FormData(sf);svg.outerHTML=logoSVG({nombre:fd.get("nombre"),siglas:fd.get("siglas"),forma:fd.get("forma"),color:fd.get("color"),tinta:fd.get("tinta")},56)}return}
   if(t.dataset.act==="nivelAdm"){const id=t.dataset.id,n=+t.value;t.blur();call("nivelJugador",{id,nivel:n}).then(j=>{if(S.players[id])S.players[id].nivel=j.nivel;flash("Categoría guardada")}).catch(er=>flash(er.message));return}
+  if(t.dataset.fx&&S.foto){let v=t.value;if(t.dataset.t==="num")v=v===""?"":+v;setPath(S.foto,t.dataset.fx,v);if(t.dataset.re){S.keepScroll=true;if(t.tagName==="SELECT"||t.type==="radio")t.blur();render()}return}
+  if(t.dataset.act==="fotoArchivo"&&t.files&&t.files[0]){const f=t.files[0];t.value="";leerArchivoFoto(f);return}
+  if(t.dataset.act==="formatoSel"){S.formatoSel=t.value?{rid:S.retaId,fid:t.value}:null;S.keepScroll=true;t.blur();return render()}
   if(t.dataset.act==="rondasSel"){S.rondasSel=+t.value;S.keepScroll=true;t.blur();return render()}
   if(t.dataset.act==="rkModo"){S.rkModo=t.value;try{localStorage.setItem("lareta_rk",t.value)}catch(er){}S.keepScroll=true;t.blur();return render()}
   const a=t.dataset.act;const rid=S.retaId,r=S.retas[rid];if(!r||!S.uid)return;
@@ -1363,7 +1582,7 @@ document.addEventListener("change",e=>{
     setTimeout(()=>{const ae=document.activeElement;if(!(ae&&ae.closest&&ae.closest("#main")&&/INPUT|SELECT|TEXTAREA/.test(ae.tagName)))render()},60);
     call("marcador",{retaId:rid,matchId:mid,a:cur.a,b:cur.b}).catch(er=>{flash(er.message);refresh(true)})}
 });
-document.addEventListener("input",e=>{const t=e.target;if(t.dataset&&t.dataset.buscar==="ins"){filtrarIns(t.value);return}if(!t.dataset||!t.dataset.f||!S.cd||t.dataset.re)return;let v=t.value;if(t.dataset.t==="num")v=v===""?"":+v;setPath(S.cd,t.dataset.f,v)});
+document.addEventListener("input",e=>{const t=e.target;if(t.dataset&&t.dataset.fx&&S.foto&&t.type!=="radio"&&t.tagName!=="SELECT"){let v=t.value;if(t.dataset.t==="num")v=v===""?"":+v;setPath(S.foto,t.dataset.fx,v);return}if(t.dataset&&t.dataset.buscar==="ins"){filtrarIns(t.value);return}if(!t.dataset||!t.dataset.f||!S.cd||t.dataset.re)return;let v=t.value;if(t.dataset.t==="num")v=v===""?"":+v;setPath(S.cd,t.dataset.f,v)});
 document.addEventListener("focusout",()=>setTimeout(()=>{if(S.dirty&&!document.activeElement?.closest?.("#main input,#main select,#main textarea")){S.keepScroll=true;render()}},0));
 
 document.addEventListener("submit",async e=>{
@@ -1381,6 +1600,7 @@ document.addEventListener("submit",async e=>{
     const r=await act("agregarJugador",{alias:g("alias"),celular:cel,retaId:S.retaId},"Jugador agregado e inscrito");if(r){S.keepScroll=true;render()}return}
   if(kind==="agregarCuenta"){const cel=g("celular").replace(/\D/g,"");if(cel.length!==10)return flash("Escribe el celular a 10 dígitos.");const jid=g("jugadorId");if(!jid&&!g("alias"))return flash("Escribe el alias.");
     const r=await act("agregarJugador",{alias:g("alias"),celular:cel,jugadorId:jid},jid?"Celular guardado":"Jugador agregado");if(r){S.cuentas=await call("jugadoresAdmin").catch(()=>S.cuentas);f.reset();render()}return}
+  if(kind==="gemini"){if(!g("llave"))return flash("Pega la llave.");const r=await act("llaveGemini",{llave:g("llave")},"Lectura de fotos activada");if(r){f.reset();S.version="";refresh(true)}return}
   if(kind==="perfil"){if(!g("nombre"))return flash("Escribe tu nombre.");return act("perfil",{nombre:g("nombre"),apellido:g("apellido"),alias:g("alias"),nivel:+fd.get("nivel")||0},"Perfil guardado")}
   if(kind==="pin"){if(!/^\d{6}$/.test(g("nuevo")))return flash("El PIN nuevo debe ser de 6 números.");if(g("nuevo")!==g("nuevo2"))return flash("Los PIN nuevos no coinciden.");
     const r=await act("cambiarPin",{actual:g("actual"),nuevo:g("nuevo")});if(r){S.showPin=false;render();flash("PIN cambiado")}return}
@@ -1393,8 +1613,8 @@ document.addEventListener("submit",async e=>{
     if(!data.nombre)return flash("Escribe el nombre de la marca.");
     const r=await act("patrocinador",data,"Patrocinador guardado");if(r){S.editSpon=null;S.sponImg=undefined;render()}return}
   if(kind==="reta"){readDraft(f);const d=S.draft;if(!d.clubTexto.trim())return flash("Escribe el club.");
-    const r=await act("crearReta",{club:d.clubTexto.trim(),fecha:d.fecha,hora:d.hora,canchas:d.canchas,maxJugadores:d.maxJugadores,tipo:d.tipo,puntos:d.puntos,modo:d.modo,reglas:d.reglas,castigo:d.castigo,nivel:d.nivel||""},"Reta creada. Apúntate e invita a los demás.");
-    if(r){S.draft=null;go("reta",{retaId:r.id})}}
+    const r=await act("crearReta",{club:d.clubTexto.trim(),fecha:d.fecha,hora:d.hora,canchas:d.canchas,maxJugadores:d.maxJugadores,tipo:d.tipo,puntos:d.puntos,modo:d.modo,reglas:d.reglas,castigo:d.castigo,nivel:d.nivel||""},"Jugada creada. Ahora elige a los jugadores.");
+    if(r){S.draft=null;go("reta",{retaId:r.id,showInscribir:true})}}
 });
 
 /* ---------- instalar como app ---------- */
@@ -1418,7 +1638,7 @@ if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.ser
   let cache=null;try{const c=JSON.parse(localStorage.getItem("lareta_cache")||"null");if(c&&c.d&&c.t===getTok().slice(-16))cache=c.d}catch(e){}
   if(cache){apply(cache);S.version=cache.version;refresh(false)}else await refresh(true);
   if(S.status!=="ready")return;
-  S.view=S.uid?"retas":"inicio";
+  S.view=S.uid?"retas":"ranking";
   try{const t=+localStorage.getItem("lareta_pushNo");if(t&&Date.now()-t<7*864e5)S.pushNo=true}catch(e){}
   render();
   if(S.uid&&permisoNotif()==="granted")activarPush(false).then(o=>{if(o){S.keepScroll=true;render()}});
